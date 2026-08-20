@@ -13,3 +13,6 @@ done
 for c in src/*.c; do
 	clang -std=c99 $FLAGS "$c"
 done
+
+# validate objective-c files are correct
+clang -c -fobjc-arc -Wall -Wextra -Isrc src/eclair_apple.m -o /tmp/apple.o
