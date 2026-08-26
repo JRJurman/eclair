@@ -16,6 +16,21 @@
 extern "C" {
 #endif
 
+// symbol visibility (used for shared builds)
+#if defined(_WIN32)
+	#if defined(ECLAIR_BUILD_SHARED)
+		#define ECLAIR_API __declspec(dllexport)
+	#elif defined(ECLAIR_SHARED)
+		#define ECLAIR_API __declspec(dllimport)
+	#else
+		#define ECLAIR_API
+	#endif
+#elif defined(ECLAIR_BUILD_SHARED)
+	#define ECLAIR_API __attribute__((visibility("default")))
+#else
+	#define ECLAIR_API
+#endif
+
 typedef enum {
 	// no error - everything good!
 	ECLAIR_OK = 0,
@@ -67,10 +82,10 @@ typedef enum {
 /* start eclair. idempotent; returns ECLAIR_OK on success;
  * ECLAIR_ERR_BACKEND_FAILED if the platform could not start
  */
-eclair_error eclair_init(void);
+ECLAIR_API eclair_error eclair_init(void);
 
 /* stop eclair and release everything; silences any speech in-progress */
-void eclair_shutdown(void);
+ECLAIR_API void eclair_shutdown(void);
 
 /* speak text, and send it to a routable screen reader or synthesizer;
  *
@@ -80,40 +95,40 @@ void eclair_shutdown(void);
  * ECLAIR_ERR_NO_BACKEND if no routable backend is available (and one was intended)
  * ECLAIR_OK if everything is good
  */
-eclair_error eclair_speak(const char *utf8, bool interrupt);
+ECLAIR_API eclair_error eclair_speak(const char *utf8, bool interrupt);
 
 /* stop speech in progress (best effort, not always available) */
-eclair_error eclair_stop(void);
+ECLAIR_API eclair_error eclair_stop(void);
 
 /* choose where text may go;
  * defaults to ECLAIR_ROUTE_PREFER_SCREEN_READER
  */
-void eclair_set_route(eclair_route route);
+ECLAIR_API void eclair_set_route(eclair_route route);
 
 /* set speech rate, 0.0 slowest, 1.0 fastest, default 0.5;
  * only applies to synthesizers (screen readers have their own rate)
  */
-void eclair_set_rate(float rate);
+ECLAIR_API void eclair_set_rate(float rate);
 
 /* set speech volume, 0.0 silent, 1.0 full, default 1.0;
  * like rate only applies to synthesizers, not screen readers
  */
-void eclair_set_volume(float volume);
+ECLAIR_API void eclair_set_volume(float volume);
 
 /* return what kind of device eclair will send text to,
  * either synthesizer or screen reader; mostly important for
  * exposing whether controls like set_volume and set_rate should
  * be made available
  */
-eclair_output eclair_current_output(void);
+ECLAIR_API eclair_output eclair_current_output(void);
 
 /* name of the active backend; NULL when there is none;
  * not intended for branching (use eclair_current_output instead)
  */
-const char *eclair_backend_name(void);
+ECLAIR_API const char *eclair_backend_name(void);
 
 /* short english description of an error code */
-const char *eclair_error_string(eclair_error err);
+ECLAIR_API const char *eclair_error_string(eclair_error err);
 
 #ifdef __cplusplus
 }
