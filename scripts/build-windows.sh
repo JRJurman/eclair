@@ -22,7 +22,7 @@ cat > dist/obj/build.bat <<EOF
 call "$VCVARS" >nul || exit /b 1
 cl -nologo -LD -MD -W4 -EHsc -DECLAIR_BUILD_SHARED -I src ^
 	src/eclair.c src/eclair_windows.cpp ^
-	-Fe:dist/eclair.dll -Fo:dist/obj/ || exit /b 1
+	-Fe:dist/eclair.dll -Fo:dist/obj/ ole32.lib || exit /b 1
 EOF
 
 cmd //c "$(cygpath -w dist/obj/build.bat)"

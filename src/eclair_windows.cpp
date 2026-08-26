@@ -16,8 +16,12 @@
 #endif
 
 #include <windows.h>
+#include <objbase.h> /* CoInitializeEx */
 #include <stddef.h> /* NULL */
 #include <stdlib.h>
+
+/* true when our CoInitializeEx call was counted and we owe a CoUninitialize */
+static bool g_com_owned = false;
 
 static float g_rate = 0.5f;
 static float g_volume = 1.0f;
@@ -84,25 +88,12 @@ static void nvda_load(void) {
 			nvda_unload();
 }
 
-// lifecycle
-
-bool eclair_platform_init(void) {
-	nvda_load();
-	return true;
-}
-
-void eclair_platform_shutdown(void) {
-	nvda_unload();
-}
-
-// screen readers - NVDA, JAWS, UIA
-
-bool eclair_sr_available(void) {
-	// 0 is success; anything else means NVDA is not running
+static bool nvda_available(void) {
+	// 0 is success, anything else means NVDA is not running
 	return g_nvda_test_if_running != NULL && g_nvda_test_if_running() == 0;
 }
 
-bool eclair_sr_speak(const char *utf8, bool interrupt) {
+static bool nvda_speak(const char *utf8, bool interrupt) {
 	if (g_nvda_speak_text == NULL)
 		return false;
 
@@ -121,15 +112,91 @@ bool eclair_sr_speak(const char *utf8, bool interrupt) {
 	return spoke || brailled;
 }
 
-bool eclair_sr_stop(void) {
+static bool nvda_stop(void) {
 	if (g_nvda_cancel_speech == NULL)
 		return false;
 
 	return g_nvda_cancel_speech() == 0;
 }
 
+// screen reader backends supported by windows;
+// we will pick the first available one - we only expect one to be active at a time
+
+typedef struct {
+	const char *name;
+	bool (*available)(void);
+	bool (*speak)(const char *utf8, bool interrupt);
+	bool (*stop)(void);
+} eclair_sr_backend;
+
+static const eclair_sr_backend g_sr_backends[] = {
+	{ "NVDA", nvda_available, nvda_speak, nvda_stop },
+};
+
+static const eclair_sr_backend *sr_active(void) {
+	size_t count = sizeof(g_sr_backends) / sizeof(g_sr_backends[0]);
+
+	// as soon as we find an available screen reader, return it
+	for (size_t i = 0; i < count; i++) {
+		if (g_sr_backends[i].available()) {
+			return &g_sr_backends[i];
+		}
+	}
+
+	// could not find an available screen reader
+	return NULL;
+}
+
+// lifecycle
+
+bool eclair_platform_init(void) {
+	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
+	/* S_OK - we initialized it (we'll need to uninitialize),
+	 * S_FALSE - already initialized (still need to uninitialize),
+	 * RPC_E_CHANGED_MODE - host chose the other apartment (no need to uninitialize)
+	 */
+	if (hr == RPC_E_CHANGED_MODE) {
+		g_com_owned = false;
+	} else if (SUCCEEDED(hr)) {
+		g_com_owned = true;
+	} else {
+		// resource failure
+		return false;
+	}
+
+	nvda_load();
+	return true;
+}
+
+void eclair_platform_shutdown(void) {
+	nvda_unload();
+
+	if (g_com_owned) {
+		CoUninitialize();
+		g_com_owned = false;
+	}
+}
+
+// screen readers - NVDA, JAWS, UIA
+
+bool eclair_sr_available(void) {
+	return sr_active() != NULL;
+}
+
+bool eclair_sr_speak(const char *utf8, bool interrupt) {
+	const eclair_sr_backend *sr = sr_active();
+	return sr != NULL && sr->speak(utf8, interrupt);
+}
+
+bool eclair_sr_stop(void) {
+	const eclair_sr_backend *sr = sr_active();
+	return sr != NULL && sr->stop();
+}
+
 const char *eclair_sr_name(void) {
-	return eclair_sr_available() ? "NVDA" : NULL;
+	const eclair_sr_backend *sr = sr_active();
+	return sr != NULL ? sr->name : NULL;
 }
 
 // synthesizer - SAPI
@@ -163,5 +230,5 @@ const char *eclair_synth_name(void) {
 
 #else
 // Not a windows platform
-typedef int eclair_awindow_unused_translation_unit;
+typedef int eclair_window_unused_translation_unit;
 #endif /* _WIN32 */
