@@ -17,6 +17,7 @@
 
 #include <windows.h>
 #include <objbase.h> /* CoInitializeEx */
+#include <sapi.h>
 #include <stddef.h> /* NULL */
 #include <stdlib.h>
 
@@ -147,6 +148,25 @@ static const eclair_sr_backend *sr_active(void) {
 	return NULL;
 }
 
+// SAPI - windows synthesizer that is always present
+
+static ISpVoice *g_voice = NULL;
+
+static void sapi_unload(void) {
+	if (g_voice != NULL) {
+		g_voice->Release();
+		g_voice = NULL;
+	}
+}
+
+static void sapi_load(void) {
+	HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL,
+																IID_ISpVoice, (void **)&g_voice);
+
+	if (FAILED(hr))
+		g_voice = NULL;
+}
+
 // lifecycle
 
 bool eclair_platform_init(void) {
@@ -165,12 +185,14 @@ bool eclair_platform_init(void) {
 		return false;
 	}
 
+	sapi_load();
 	nvda_load();
 	return true;
 }
 
 void eclair_platform_shutdown(void) {
 	nvda_unload();
+	sapi_unload();
 
 	if (g_com_owned) {
 		CoUninitialize();
@@ -202,29 +224,58 @@ const char *eclair_sr_name(void) {
 // synthesizer - SAPI
 
 bool eclair_synth_available(void) {
-	return false;
+	return g_voice != NULL;
 }
 
 bool eclair_synth_speak(const char *utf8, bool interrupt) {
-	(void)utf8;
-	(void)interrupt;
-	return false;
+	if (g_voice == NULL)
+		return false;
+
+	wchar_t *wide = utf8_to_wide(utf8);
+	if (wide == NULL)
+		return false;
+
+	/* ASYNC, otherwise Speak() will block until utterance finishes;
+	 * NOT_XML, otherwise SAPI parses text with "<" as XML
+	 */
+	DWORD flags = SPF_ASYNC | SPF_IS_NOT_XML;
+	if (interrupt)
+		flags |= SPF_PURGEBEFORESPEAK;
+
+	HRESULT hr = g_voice->Speak(wide, flags, NULL);
+
+	free(wide);
+	return SUCCEEDED(hr);
 }
 
 bool eclair_synth_stop(void) {
-	return false;
+	if (g_voice == NULL)
+		return false;
+
+	// NULL is documented as a way to stop current utterance
+	HRESULT hr = g_voice->Speak(NULL, SPF_PURGEBEFORESPEAK, NULL);
+	return SUCCEEDED(hr);
 }
 
 void eclair_synth_set_rate(float rate) {
 	g_rate = rate;
+	if (g_voice != NULL) {
+		long sapi_rate = (long) eclair_map_rate(rate, -10.0f, 0.0f, 10.0f);
+		g_voice->SetRate(sapi_rate);
+	}
 }
 
 void eclair_synth_set_volume(float volume) {
 	g_volume = volume;
+	if (g_voice != NULL) {
+		USHORT sapi_volume = (USHORT) (volume * 100.0f);
+		g_voice->SetVolume(sapi_volume);
+	}
+
 }
 
 const char *eclair_synth_name(void) {
-	return NULL;
+	return g_voice != NULL ? "SAPI" : NULL;
 }
 
 
