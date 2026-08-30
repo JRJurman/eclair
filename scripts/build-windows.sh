@@ -15,6 +15,13 @@ VCVARS=$(cygpath -w "$VSPATH/VC/Auxiliary/Build/vcvars64.bat")
 # intermediates land here, and are removed once the build succeeds
 mkdir -p dist/obj
 
+# the following links are referenced for different backends:
+# ole32			- COM apartment, CoCreateInstance	(JAWS, SAPI)
+# sapi			- CLSID_SpVoice, IID_ISpVoice			(SAPI)
+# oleaut32	- SysAllocString, VARIANT					(JAWS)
+# user32		- FindWindowW											(JAWS)
+LINKS="ole32.lib sapi.lib oleaut32.lib user32.lib"
+
 # git bash escapes embedded double quotes as \" when building the windows
 # command line, and cmd reads those backslashes
 cat > dist/obj/build.bat <<EOF
@@ -22,7 +29,7 @@ cat > dist/obj/build.bat <<EOF
 call "$VCVARS" >nul || exit /b 1
 cl -nologo -LD -MD -W4 -EHsc -DECLAIR_BUILD_SHARED -I src ^
 	src/eclair.c src/eclair_windows.cpp ^
-	-Fe:dist/eclair.dll -Fo:dist/obj/ ole32.lib sapi.lib oleaut32.lib user32.lib || exit /b 1
+	-Fe:dist/eclair.dll -Fo:dist/obj/ $LINKS || exit /b 1
 EOF
 
 cmd //c "$(cygpath -w dist/obj/build.bat)"

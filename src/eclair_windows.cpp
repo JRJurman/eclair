@@ -304,6 +304,59 @@ static void sapi_load(void) {
 		g_voice = NULL;
 }
 
+static bool sapi_available(void) {
+	// SAPI ships with windows, so this is true on any machine where
+	// CoCreateInstance succeeded
+	return g_voice != NULL;
+}
+
+static bool sapi_speak(const char *utf8, bool interrupt) {
+	wchar_t *wide = utf8_to_wide(utf8);
+	if (wide == NULL)
+		return false;
+
+	/* ASYNC, otherwise Speak() will block until utterance finishes;
+	 * NOT_XML, otherwise SAPI parses text with "<" as XML
+	 */
+	DWORD flags = SPF_ASYNC | SPF_IS_NOT_XML;
+	if (interrupt)
+		flags |= SPF_PURGEBEFORESPEAK;
+
+	HRESULT hr = g_voice->Speak(wide, flags, NULL);
+
+	free(wide);
+	return SUCCEEDED(hr);
+}
+
+static bool sapi_stop(void) {
+	if (g_voice == NULL)
+		return false;
+
+	// NULL is documented as a way to stop current utterance
+	HRESULT hr = g_voice->Speak(NULL, SPF_PURGEBEFORESPEAK, NULL);
+	return SUCCEEDED(hr);
+}
+
+static void sapi_set_rate(float rate) {
+	g_rate = rate;
+	if (g_voice != NULL) {
+		long sapi_rate = (long) lroundf(eclair_map_rate(rate, -10.0f, 0.0f, 10.0f));
+		g_voice->SetRate(sapi_rate);
+	}
+}
+
+static void sapi_set_volume(float volume) {
+	g_volume = volume;
+	if (g_voice != NULL) {
+		USHORT sapi_volume = (USHORT) lroundf(volume * 100.0f);
+		g_voice->SetVolume(sapi_volume);
+	}
+}
+
+static const char *sapi_name(void) {
+	return "SAPI";
+}
+
 // lifecycle
 
 bool eclair_platform_init(void) {
@@ -339,7 +392,7 @@ void eclair_platform_shutdown(void) {
 	}
 }
 
-// screen readers - NVDA, JAWS, UIA
+// screen readers lifecycle functions (NVDA, JAWS, UIA)
 
 bool eclair_sr_available(void) {
 	return sr_active() != NULL;
@@ -360,55 +413,30 @@ const char *eclair_sr_name(void) {
 	return sr != NULL ? sr->name : NULL;
 }
 
-// synthesizer - SAPI
+// synthesizer lifecycle functions (SAPI)
 
 bool eclair_synth_available(void) {
-	return g_voice != NULL;
+	return sapi_available();
 }
 
 bool eclair_synth_speak(const char *utf8, bool interrupt) {
-	wchar_t *wide = utf8_to_wide(utf8);
-	if (wide == NULL)
-		return false;
-
-	/* ASYNC, otherwise Speak() will block until utterance finishes;
-	 * NOT_XML, otherwise SAPI parses text with "<" as XML
-	 */
-	DWORD flags = SPF_ASYNC | SPF_IS_NOT_XML;
-	if (interrupt)
-		flags |= SPF_PURGEBEFORESPEAK;
-
-	HRESULT hr = g_voice->Speak(wide, flags, NULL);
-
-	free(wide);
-	return SUCCEEDED(hr);
+	return sapi_speak(utf8, interrupt);
 }
 
 bool eclair_synth_stop(void) {
-	// NULL is documented as a way to stop current utterance
-	HRESULT hr = g_voice->Speak(NULL, SPF_PURGEBEFORESPEAK, NULL);
-	return SUCCEEDED(hr);
+	return sapi_stop();
 }
 
 void eclair_synth_set_rate(float rate) {
-	g_rate = rate;
-	if (g_voice != NULL) {
-		long sapi_rate = (long) lroundf(eclair_map_rate(rate, -10.0f, 0.0f, 10.0f));
-		g_voice->SetRate(sapi_rate);
-	}
+	sapi_set_rate(rate);
 }
 
 void eclair_synth_set_volume(float volume) {
-	g_volume = volume;
-	if (g_voice != NULL) {
-		USHORT sapi_volume = (USHORT) lroundf(volume * 100.0f);
-		g_voice->SetVolume(sapi_volume);
-	}
-
+	sapi_set_volume(volume);
 }
 
 const char *eclair_synth_name(void) {
-	return g_voice != NULL ? "SAPI" : NULL;
+	return sapi_available() ? sapi_name() : NULL;
 }
 
 
