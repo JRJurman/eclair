@@ -17,9 +17,13 @@
 
 #include <windows.h>
 #include <objbase.h> /* CoInitializeEx */
+#include <oleauto.h>
 #include <sapi.h>
 #include <stddef.h> /* NULL */
 #include <stdlib.h>
+#include <string.h> /* memcpy */
+#include <wchar.h> /* wcslen */
+#include <math.h> /* lroundf */
 
 /* true when our CoInitializeEx call was counted and we owe a CoUninitialize */
 static bool g_com_owned = false;
@@ -83,10 +87,6 @@ static void nvda_load(void) {
 		GetProcAddress(g_nvda_dll, "nvdaController_cancelSpeech"));
 	g_nvda_braille_message = reinterpret_cast<PFN_nvda_braille_message>(
 		GetProcAddress(g_nvda_dll, "nvdaController_brailleMessage"));
-
-	if (g_nvda_test_if_running == NULL || g_nvda_speak_text == NULL ||
-			g_nvda_cancel_speech == NULL || g_nvda_braille_message == NULL)
-			nvda_unload();
 }
 
 static bool nvda_available(void) {
@@ -95,9 +95,6 @@ static bool nvda_available(void) {
 }
 
 static bool nvda_speak(const char *utf8, bool interrupt) {
-	if (g_nvda_speak_text == NULL)
-		return false;
-
 	wchar_t *wide = utf8_to_wide(utf8);
 	if (wide == NULL)
 		return false;
@@ -120,6 +117,145 @@ static bool nvda_stop(void) {
 	return g_nvda_cancel_speech() == 0;
 }
 
+// JAWS - FreedomSci.JawsApi
+
+static IDispatch *g_jaws = NULL;
+static DISPID g_jaws_say = DISPID_UNKNOWN;
+static DISPID g_jaws_stop = DISPID_UNKNOWN;
+static DISPID g_jaws_run = DISPID_UNKNOWN;
+
+static void jaws_unload(void) {
+	if (g_jaws != NULL) {
+		g_jaws->Release();
+		g_jaws = NULL;
+	}
+
+	g_jaws_say = DISPID_UNKNOWN;
+	g_jaws_stop = DISPID_UNKNOWN;
+	g_jaws_run = DISPID_UNKNOWN;
+}
+
+static bool jaws_dispid(const wchar_t *name, DISPID *out) {
+	OLECHAR *n = (OLECHAR *)name;
+	return SUCCEEDED(g_jaws->GetIDsOfNames(IID_NULL, &n, 1, LOCALE_USER_DEFAULT, out));
+}
+
+static void jaws_load(void) {
+	CLSID clsid;
+	if (FAILED(CLSIDFromProgID(L"FreedomSci.JawsApi", &clsid)))
+		return; // jaws not installed
+
+	// check if jaws is installed and running
+	if (FAILED(CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER,
+															IID_IDispatch, (void **)&g_jaws))) {
+		g_jaws = NULL;
+		return;
+	}
+
+	jaws_dispid(L"SayString", &g_jaws_say);
+	jaws_dispid(L"StopSpeech", &g_jaws_stop);
+	jaws_dispid(L"RunFunction", &g_jaws_run);
+}
+
+static bool jaws_available(void) {
+	// use window to detect JAWS is running
+	return g_jaws != NULL && FindWindowW(L"JFWUI2", NULL) != NULL;
+}
+
+static bool jaws_invoke(DISPID id, const wchar_t *text, const VARIANT_BOOL *flush) {
+	BSTR bstr = SysAllocString(text);
+	if (bstr == NULL)
+		return false;
+
+	VARIANT args[2];
+	VariantInit(&args[0]);
+	VariantInit(&args[1]);
+
+	UINT count;
+	if (flush != NULL) {
+		// DISPPARAMS args run backwards - rgvarg[0] is the last parameter
+		args[0].vt = VT_BOOL;
+		args[0].boolVal = *flush;
+
+		args[1].vt = VT_BSTR;
+		args[1].bstrVal = bstr;
+
+		count = 2;
+	} else {
+		args[0].vt = VT_BSTR;
+		args[0].bstrVal = bstr;
+
+		count = 1;
+	}
+
+	DISPPARAMS params = { args, NULL, count, 0 };
+	VARIANT result;
+	VariantInit(&result);
+
+	HRESULT hr = g_jaws->Invoke(id, IID_NULL, LOCALE_USER_DEFAULT,
+															DISPATCH_METHOD, &params, &result, NULL, NULL);
+
+	bool ok = SUCCEEDED(hr) && result.vt == VT_BOOL && result.boolVal != VARIANT_FALSE;
+
+	VariantClear(&result);
+	SysFreeString(bstr);
+	return ok;
+}
+
+/* use `BrailleString("...")` script expression to send text to braille devices */
+static wchar_t *jaws_braille_expression(const wchar_t *text) {
+	static const wchar_t prefix[] = L"BrailleString(\"";
+	static const wchar_t suffix[] = L"\")";
+
+	const size_t plen = sizeof(prefix) / sizeof(wchar_t) - 1;
+	const size_t slen = sizeof(suffix) / sizeof(wchar_t) - 1;
+	const size_t tlen = wcslen(text);
+
+	wchar_t *expr = (wchar_t *)malloc((plen + tlen + slen + 1) * sizeof(wchar_t));
+	if (expr == NULL)
+		return NULL;
+
+	memcpy(expr, prefix, plen * sizeof(wchar_t));
+	memcpy(expr + plen, text, tlen * sizeof(wchar_t));
+	memcpy(expr + plen + tlen, suffix, slen * sizeof(wchar_t));
+	expr[plen + tlen + slen] = L'\0';
+
+	for (size_t i = plen; i < plen + tlen; i++) {
+		if (expr[i] == L'"')
+			expr[i] = L'\'';
+		else if (expr[i] == L'\r' || expr[i] == L'\n')
+			expr[i] = L' ';
+	}
+
+	return expr;
+}
+
+static bool jaws_speak(const char *utf8, bool interrupt) {
+	wchar_t *wide = utf8_to_wide(utf8);
+	if (wide == NULL)
+		return false;
+
+	// bFlush to interrupt
+	VARIANT_BOOL flush = interrupt ? VARIANT_TRUE : VARIANT_FALSE;
+	bool spoke = jaws_invoke(g_jaws_say, wide, &flush);
+
+	bool brailled = false;
+	wchar_t *expr = jaws_braille_expression(wide);
+	if (expr != NULL) {
+		brailled = jaws_invoke(g_jaws_run, expr, NULL);
+		free(expr);
+	}
+
+	free(wide);
+	return spoke || brailled;
+}
+
+static bool jaws_stop(void) {
+	DISPPARAMS none = { NULL, NULL, 0, 0 };
+	return SUCCEEDED(g_jaws->Invoke(g_jaws_stop, IID_NULL, LOCALE_USER_DEFAULT,
+																	DISPATCH_METHOD, &none, NULL, NULL, NULL));
+}
+
 // screen reader backends supported by windows;
 // we will pick the first available one - we only expect one to be active at a time
 
@@ -132,6 +268,7 @@ typedef struct {
 
 static const eclair_sr_backend g_sr_backends[] = {
 	{ "NVDA", nvda_available, nvda_speak, nvda_stop },
+	{ "JAWS", jaws_available, jaws_speak, jaws_stop },
 };
 
 static const eclair_sr_backend *sr_active(void) {
@@ -160,7 +297,7 @@ static void sapi_unload(void) {
 }
 
 static void sapi_load(void) {
-	HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL,
+	HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_INPROC_SERVER,
 																IID_ISpVoice, (void **)&g_voice);
 
 	if (FAILED(hr))
@@ -187,11 +324,13 @@ bool eclair_platform_init(void) {
 
 	sapi_load();
 	nvda_load();
+	jaws_load();
 	return true;
 }
 
 void eclair_platform_shutdown(void) {
 	nvda_unload();
+	jaws_unload();
 	sapi_unload();
 
 	if (g_com_owned) {
@@ -228,9 +367,6 @@ bool eclair_synth_available(void) {
 }
 
 bool eclair_synth_speak(const char *utf8, bool interrupt) {
-	if (g_voice == NULL)
-		return false;
-
 	wchar_t *wide = utf8_to_wide(utf8);
 	if (wide == NULL)
 		return false;
@@ -249,9 +385,6 @@ bool eclair_synth_speak(const char *utf8, bool interrupt) {
 }
 
 bool eclair_synth_stop(void) {
-	if (g_voice == NULL)
-		return false;
-
 	// NULL is documented as a way to stop current utterance
 	HRESULT hr = g_voice->Speak(NULL, SPF_PURGEBEFORESPEAK, NULL);
 	return SUCCEEDED(hr);
@@ -260,7 +393,7 @@ bool eclair_synth_stop(void) {
 void eclair_synth_set_rate(float rate) {
 	g_rate = rate;
 	if (g_voice != NULL) {
-		long sapi_rate = (long) eclair_map_rate(rate, -10.0f, 0.0f, 10.0f);
+		long sapi_rate = (long) lroundf(eclair_map_rate(rate, -10.0f, 0.0f, 10.0f));
 		g_voice->SetRate(sapi_rate);
 	}
 }
@@ -268,7 +401,7 @@ void eclair_synth_set_rate(float rate) {
 void eclair_synth_set_volume(float volume) {
 	g_volume = volume;
 	if (g_voice != NULL) {
-		USHORT sapi_volume = (USHORT) (volume * 100.0f);
+		USHORT sapi_volume = (USHORT) lroundf(volume * 100.0f);
 		g_voice->SetVolume(sapi_volume);
 	}
 
@@ -281,5 +414,5 @@ const char *eclair_synth_name(void) {
 
 #else
 // Not a windows platform
-typedef int eclair_window_unused_translation_unit;
+typedef int eclair_windows_unused_translation_unit;
 #endif /* _WIN32 */
