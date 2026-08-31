@@ -20,7 +20,8 @@ mkdir -p dist/obj
 # sapi			- CLSID_SpVoice, IID_ISpVoice			(SAPI)
 # oleaut32	- SysAllocString, VARIANT					(JAWS)
 # user32		- FindWindowW											(JAWS)
-LINKS="ole32.lib sapi.lib oleaut32.lib user32.lib"
+# uiautomationcore - UiaClientsAreListening, UiaRaiseNotificationEvent (UIA).
+LINKS="ole32.lib sapi.lib oleaut32.lib user32.lib uiautomationcore.lib"
 
 # git bash escapes embedded double quotes as \" when building the windows
 # command line, and cmd reads those backslashes

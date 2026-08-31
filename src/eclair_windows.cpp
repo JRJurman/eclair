@@ -19,6 +19,7 @@
 #include <objbase.h> /* CoInitializeEx */
 #include <oleauto.h>
 #include <sapi.h>
+#include <uiautomation.h>
 #include <stddef.h> /* NULL */
 #include <stdlib.h>
 #include <string.h> /* memcpy */
@@ -48,7 +49,10 @@ static wchar_t *utf8_to_wide(const char *utf8) {
 	return wide;
 }
 
-// NVDA - nvdaControllerClient.dll, resolved at runtime;
+/* ---------------------------------------------------------------
+ * NVDA - nvdaControllerClient.dll, resolved at runtime
+ * --------------------------------------------------------------- */
+
 /* entry points return error_status_t (unsigned long), 0 on success */
 typedef unsigned long (WINAPI *PFN_nvda_test_if_running)(void);
 typedef unsigned long (WINAPI *PFN_nvda_speak_text)(const wchar_t *text);
@@ -117,7 +121,9 @@ static bool nvda_stop(void) {
 	return g_nvda_cancel_speech() == 0;
 }
 
-// JAWS - FreedomSci.JawsApi
+/* ---------------------------------------------------------------
+ * JAWS - FreedomSci.JawsApi
+ * --------------------------------------------------------------- */
 
 static IDispatch *g_jaws = NULL;
 static DISPID g_jaws_say = DISPID_UNKNOWN;
@@ -256,6 +262,144 @@ static bool jaws_stop(void) {
 																	DISPATCH_METHOD, &none, NULL, NULL, NULL));
 }
 
+
+
+/* ---------------------------------------------------------------
+ * UIA - screen reader api for Narrator
+ * (included on all Windows machines)
+ * --------------------------------------------------------------- */
+
+// note - we test for narrator specifically because
+// detecting UIA is not possible trivially (and is used for other engines like JAWS / NVDA)
+static bool narrator_available(void) {
+	HANDLE narrator = OpenMutexW(SYNCHRONIZE, FALSE, L"NarratorRunning");
+	if (narrator == NULL)
+		return false;
+	CloseHandle(narrator);
+
+	return true;
+}
+
+// provider for UIA to tap into when the user is running Narrator
+class eclair_uia_provider : public IRawElementProviderSimple {
+	public:
+		eclair_uia_provider(void) : m_hwnd(NULL) {}
+
+		void set_window(HWND hwnd) {
+			m_hwnd = hwnd;
+		}
+
+		/* IUnknown */
+
+		// we are never freed, so the counts are normal - COM only
+		// requires that they stay non-zero as long as the object is alive
+		IFACEMETHODIMP_(ULONG) AddRef(void) {
+			return 2;
+		}
+
+		IFACEMETHODIMP_(ULONG) Release(void) {
+			return 1;
+		}
+
+		IFACEMETHODIMP QueryInterface(REFIID riid, void **object) {
+			if (IsEqualIID(riid, IID_IUnknown) ||
+					IsEqualIID(riid, IID_IRawElementProviderSimple)) {
+				*object = static_cast<IRawElementProviderSimple *>(this);
+			} else {
+				*object = NULL;
+				return E_NOINTERFACE;
+			}
+
+			AddRef();
+			return S_OK;
+		}
+
+		/* IRawElementProviderSimple */
+
+		IFACEMETHODIMP get_ProviderOptions(ProviderOptions *options) {
+			*options = ProviderOptions_ServerSideProvider;
+			return S_OK;
+		}
+
+		IFACEMETHODIMP GetPatternProvider(PATTERNID, IUnknown **pattern) {
+			// no pattern support, we only raise events
+			*pattern = NULL;
+			return S_OK;
+		}
+
+		IFACEMETHODIMP GetPropertyValue(PROPERTYID id, VARIANT *value) {
+			if (id == UIA_ControlTypePropertyId) {
+				value->vt = VT_I4;
+				value->lVal = UIA_WindowControlTypeId;
+			} else if (id == UIA_NamePropertyId) {
+				value->vt = VT_BSTR;
+				value->bstrVal = SysAllocString(L"eclair");
+			} else {
+				// "empty" indicates that we should ask the host window
+				value->vt = VT_EMPTY;
+			}
+
+			return S_OK;
+		}
+
+		IFACEMETHODIMP get_HostRawElementProvider(IRawElementProviderSimple **host) {
+			return UiaHostProviderFromHwnd(m_hwnd, host);
+		}
+
+	private:
+		HWND m_hwnd;
+};
+
+static eclair_uia_provider g_uia_provider;
+
+// the window we should announce speech through
+static HWND uia_window(void) {
+	HWND hwnd = GetForegroundWindow();
+	if (hwnd == NULL)
+		return NULL;
+
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	return pid == GetCurrentProcessId() ? hwnd : NULL;
+}
+
+static bool uia_speak(const char *utf8, bool interrupt) {
+	HWND hwnd = uia_window();
+	if (hwnd == NULL)
+		return false;
+
+	wchar_t *wide = utf8_to_wide(utf8);
+	if (wide == NULL)
+		return false;
+
+	BSTR text = SysAllocString(wide);
+	free (wide);
+	if (text == NULL)
+		return false;
+
+	g_uia_provider.set_window(hwnd);
+
+	// group id for our utterances
+	BSTR activity = SysAllocString(L"eclair");
+
+	// ImportantMostRecent supersedes what is queued
+	NotificationProcessing processing = interrupt
+		? NotificationProcessing_ImportantMostRecent
+		: NotificationProcessing_ImportantAll;
+
+	HRESULT hr = UiaRaiseNotificationEvent(&g_uia_provider, NotificationKind_Other,
+																				 processing, text, activity);
+
+	SysFreeString(activity);
+	SysFreeString(text);
+	return SUCCEEDED(hr);
+}
+
+static bool uia_stop(void) {
+	// UIA exposes no cancel
+	return true;
+}
+
 // screen reader backends supported by windows;
 // we will pick the first available one - we only expect one to be active at a time
 
@@ -269,6 +413,7 @@ typedef struct {
 static const eclair_sr_backend g_sr_backends[] = {
 	{ "NVDA", nvda_available, nvda_speak, nvda_stop },
 	{ "JAWS", jaws_available, jaws_speak, jaws_stop },
+	{ "Narrator",  narrator_available,  uia_speak,  uia_stop  },
 };
 
 static const eclair_sr_backend *sr_active(void) {
@@ -285,7 +430,9 @@ static const eclair_sr_backend *sr_active(void) {
 	return NULL;
 }
 
-// SAPI - windows synthesizer that is always present
+/* ---------------------------------------------------------------
+ * SAPI - windows synthesizer that is always present
+ * --------------------------------------------------------------- */
 
 static ISpVoice *g_voice = NULL;
 
