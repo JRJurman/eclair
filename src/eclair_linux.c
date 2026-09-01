@@ -13,6 +13,12 @@
 
 #define ECLAIR_DLSYM(lib, fn, name) (*(void **)(&(fn)) = dlsym((lib), (name)))
 
+// libdbus aborts on a non UFT-8 string, so check it is valid befor speaking - TODO
+static bool utf8_valid(const char *utf8) {
+	(void)utf8;
+	return true;
+}
+
 static float g_rate = 0.5f;
 static float g_volume = 1.0f;
 
@@ -116,8 +122,8 @@ static void speechd_set_rate(float rate) {
 static void speechd_set_volume(float volume) {
 	g_volume = volume;
 	if (g_spd != NULL) {
-		// range is -100 to 100, 0 is the default
-		int spd_volume = (int) lroundf((volume - 1.0f) * 100.0f);
+		// range is -100 to +100, +100 is the default volume
+		int spd_volume = (int) lroundf(volume * 200.0f - 100.0f);
 		g_spd_set_volume(g_spd, spd_volume);
 	}
 }
@@ -130,22 +136,168 @@ static const char *speechd_name(void) {
  * Orca - org.gnome.Orca.Service over libdbus-1
  * --------------------------------------------------------------- */
 
-static void orca_load(void) {}
+typedef struct DBusConnection DBusConnection;
+typedef struct DBusMessage DBusMessage;
+typedef struct DBusError DBusError;
+typedef unsigned int dbus_bool_t;
+typedef unsigned int dbus_uint32_t;
 
-static void orca_unload(void) {}
+// DBusBusType
+#define ECLAIR_DBUS_BUS_SESSION 0
+
+// d-bus type codes are ascii characters
+#define ECLAIR_DBUS_TYPE_INVALID ((int)'\0')
+#define ECLAIR_DBUS_TYPE_BOOLEAN ((int)'b')
+#define ECLAIR_DBUS_TYPE_STRING ((int)'s')
+
+// Orca service objects
+#define ECLAIR_ORCA_NAME "org.gnome.Orca.Service"
+#define ECLAIR_ORCA_PATH "/org/gnome/Orca/Service"
+#define ECLAIR_ORCA_SPEECH_PATH "/org/gnome/Orca/Service/SpeechAndVerbosityManager"
+#define ECLAIR_ORCA_MODULE "org.gnome.Orca.Module"
+
+typedef DBusConnection *(*PFN_dbus_bus_get_private)(int type, DBusError *error);
+typedef void (*PFN_dbus_connection_set_exit_on_disconnect)(DBusConnection *conn, dbus_bool_t exit_on_disconnect);
+typedef void (*PFN_dbus_connection_close)(DBusConnection *conn);
+typedef void (*PFN_dbus_connection_unref)(DBusConnection *conn);
+typedef dbus_bool_t (*PFN_dbus_bus_name_has_owner)(DBusConnection *conn, const char *name, DBusError *error);
+typedef DBusMessage *(*PFN_dbus_message_new_method_call)(const char *destination, const char *path, const char *iface, const char *method);
+typedef dbus_bool_t (*PFN_dbus_message_append_args)(DBusMessage *msg, int first_arg_type, ...);
+typedef void (*PFN_dbus_message_set_no_reply)(DBusMessage *msg, dbus_bool_t no_reply);
+typedef dbus_bool_t (*PFN_dbus_connection_send)(DBusConnection *conn, DBusMessage *msg, dbus_uint32_t *serial);
+typedef void (*PFN_dbus_connection_flush)(DBusConnection *conn);
+typedef void (*PFN_dbus_message_unref)(DBusMessage *msg);
+
+static void *g_dbus_lib = NULL;
+static DBusConnection *g_dbus = NULL;
+
+static PFN_dbus_bus_get_private g_dbus_bus_get_private = NULL;
+static PFN_dbus_connection_set_exit_on_disconnect g_dbus_set_exit_on_disconnect = NULL;
+static PFN_dbus_connection_close g_dbus_connection_close = NULL;
+static PFN_dbus_connection_unref g_dbus_connection_unref = NULL;
+static PFN_dbus_bus_name_has_owner g_dbus_bus_name_has_owner = NULL;
+static PFN_dbus_message_new_method_call g_dbus_message_new_method_call = NULL;
+static PFN_dbus_message_append_args g_dbus_message_append_args = NULL;
+static PFN_dbus_message_set_no_reply g_dbus_message_set_no_reply = NULL;
+static PFN_dbus_connection_send g_dbus_connection_send = NULL;
+static PFN_dbus_connection_flush g_dbus_connection_flush = NULL;
+static PFN_dbus_message_unref g_dbus_message_unref = NULL;
+
+static void orca_unload(void) {
+	if (g_dbus != NULL) {
+		g_dbus_connection_close(g_dbus);
+		g_dbus_connection_unref(g_dbus);
+		g_dbus = NULL;
+	}
+
+	if (g_dbus_lib != NULL) {
+		dlclose(g_dbus_lib);
+		g_dbus_lib = NULL;
+	}
+
+	g_dbus_bus_get_private = NULL;
+	g_dbus_set_exit_on_disconnect = NULL;
+	g_dbus_connection_close = NULL;
+	g_dbus_connection_unref = NULL;
+	g_dbus_bus_name_has_owner = NULL;
+	g_dbus_message_new_method_call = NULL;
+	g_dbus_message_append_args = NULL;
+	g_dbus_message_set_no_reply = NULL;
+	g_dbus_connection_send = NULL;
+	g_dbus_connection_flush = NULL;
+	g_dbus_message_unref = NULL;
+}
+
+static void orca_load(void) {
+	g_dbus_lib = dlopen("libdbus-1.so.3", RTLD_LAZY | RTLD_LOCAL);
+	if (g_dbus_lib == NULL)
+		return;
+
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_bus_get_private, "dbus_bus_get_private");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_set_exit_on_disconnect, "dbus_connection_set_exit_on_disconnect");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_close, "dbus_connection_close");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_unref, "dbus_connection_unref");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_bus_name_has_owner, "dbus_bus_name_has_owner");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_message_new_method_call, "dbus_message_new_method_call");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_message_append_args, "dbus_message_append_args");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_message_set_no_reply, "dbus_message_set_no_reply");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_send, "dbus_connection_send");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_flush, "dbus_connection_flush");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_message_unref, "dbus_message_unref");
+
+	if (g_dbus_bus_get_private == NULL) {
+		orca_unload();
+		return;
+	}
+
+	g_dbus = g_dbus_bus_get_private(ECLAIR_DBUS_BUS_SESSION, NULL);
+	if (g_dbus == NULL)
+		return;
+
+	// do not kill host program when killed
+	g_dbus_set_exit_on_disconnect(g_dbus, 0);
+}
 
 static bool orca_available(void) {
-	return false;
+	return g_dbus != NULL && g_dbus_bus_name_has_owner(g_dbus, ECLAIR_ORCA_NAME, NULL) != 0;
+}
+
+static bool orca_send(DBusMessage *msg) {
+	bool sent;
+
+	g_dbus_message_set_no_reply(msg, 1);
+	sent = g_dbus_connection_send(g_dbus, msg, NULL) != 0;
+	g_dbus_connection_flush(g_dbus);
+	g_dbus_message_unref(msg);
+
+	return sent;
+}
+
+static bool orca_interrupt(void) {
+	const char *command = "InterruptSpeech";
+	dbus_bool_t notify_user = 0;
+
+	DBusMessage *msg = g_dbus_message_new_method_call(ECLAIR_ORCA_NAME, ECLAIR_ORCA_SPEECH_PATH, ECLAIR_ORCA_MODULE, "ExecuteCommand");
+	if (msg == NULL)
+		return false;
+
+	if (!g_dbus_message_append_args(msg, ECLAIR_DBUS_TYPE_STRING, &command, ECLAIR_DBUS_TYPE_BOOLEAN, &notify_user, ECLAIR_DBUS_TYPE_INVALID)) {
+		g_dbus_message_unref(msg);
+		return false;
+	}
+
+	return orca_send(msg);
 }
 
 static bool orca_speak(const char *utf8, bool interrupt) {
-	(void)utf8;
-	(void)interrupt;
-	return false;
+	DBusMessage *msg;
+
+	if (g_dbus == NULL)
+		return false;
+
+	if (!utf8_valid(utf8))
+		return false;
+
+	if (interrupt)
+		orca_interrupt();
+
+	msg = g_dbus_message_new_method_call(ECLAIR_ORCA_NAME, ECLAIR_ORCA_PATH, ECLAIR_ORCA_NAME, "PresentMessage");
+	if (msg == NULL)
+		return false;
+
+	if (!g_dbus_message_append_args(msg, ECLAIR_DBUS_TYPE_STRING, &utf8, ECLAIR_DBUS_TYPE_INVALID)) {
+		g_dbus_message_unref(msg);
+		return false;
+	}
+
+	return orca_send(msg);
 }
 
 static bool orca_stop(void) {
-	return false;
+	if (g_dbus == NULL)
+		return false;
+
+	return orca_interrupt();
 }
 
 static const char *orca_name(void) {
