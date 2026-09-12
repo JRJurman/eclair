@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eclair test harness</title>
+
+<!--
+	eclair - web test harness
+
+	The counterpart to example/eclair-tk.py: a page exposing every control the
+	API offers, driving the same library the other harness does.
+
+	It loads dist/eclair.js, which is the JavaScript glue emcc writes alongside
+	dist/eclair.wasm - the pair together is what libeclair.dylib is on desktop.
+	Build them first with scripts/build-web.sh.
+
+	Emscripten's cwrap() plays the part ctypes' argtypes and restype play in the
+	Tk harness: it marshals JS values across the wasm boundary, where a
+	const char* is an offset into the heap rather than a string.
+
+	Serve it with example/eclair-web.py - browsers refuse to fetch a .wasm
+	from file://, and that script sets the .wasm MIME type correctly too.
+-->
+
+<style>
+	#controls {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		grid-template-areas:
+			'text-label   text'
+			'.            buttons'
+			'route-label  route'
+			'rate-label   rate'
+			'volume-label volume'
+			'status       status'
+			'result       result';
+		gap: 10px 12px;
+		align-items: center;
+		max-width: 560px;
+		border: none;
+		padding: 0;
+	}
+
+	#textLabel   { grid-area: text-label; }
+	#text        { grid-area: text; }
+	#buttons     { grid-area: buttons; display: flex; gap: 8px; flex-wrap: wrap; }
+	#routeLabel  { grid-area: route-label; }
+	#route       { grid-area: route; }
+	#rateLabel   { grid-area: rate-label; }
+	#rate        { grid-area: rate; }
+	#volumeLabel { grid-area: volume-label; }
+	#volume      { grid-area: volume; }
+	#statusLine  { grid-area: status; }
+	#resultLine  { grid-area: result; }
+</style>
+</head>
+<body>
+<h1>eclair test harness</h1>
+<p>Web backend &mdash; ariaNotify and Web Speech</p>
+
+<p id="errorBox" hidden></p>
+
+<fieldset id="controls" disabled>
+	<label id="textLabel" for="text">Text</label>
+	<input id="text" type="text" value="The quick brown fox jumps over the lazy dog.">
+
+	<div id="buttons">
+		<button id="speakBtn" type="button">Speak</button>
+		<button id="speakInterruptBtn" type="button">Speak (interrupt)</button>
+		<button id="stopBtn" type="button">Stop</button>
+	</div>
+
+	<label id="routeLabel" for="route">Route</label>
+	<select id="route">
+		<option value="0">off</option>
+		<option value="1">screen reader only</option>
+		<option value="2" selected>prefer screen reader</option>
+		<option value="3">synthesizer only</option>
+	</select>
+
+	<label id="rateLabel" for="rate">Rate 0.50</label>
+	<input id="rate" type="range" min="0" max="1" step="0.01" value="0.5">
+
+	<label id="volumeLabel" for="volume">Volume 1.00</label>
+	<input id="volume" type="range" min="0" max="1" step="0.01" value="1">
+
+	<div id="statusLine"></div>
+	<div id="resultLine"></div>
+</fieldset>
+
+<!--
+	MODULARIZE=1 with EXPORT_NAME=Eclair makes this define a factory function
+	rather than starting on load, so the page decides when to instantiate.
+	A missing file leaves Eclair undefined, which boot() reports.
+-->
+<script src="../dist/eclair.js"></script>
+
+<script>
+	"use strict";
+
+	/* Elements are reached by their id as a bare name. Note that ids shadowing a
+	 * Window property do not win - stopBtn and statusLine are named that way
+	 * because window.stop() and window.status are built-ins.
+	 *
+	 * Neither readout is a live region, deliberately. This page is the
+	 * instrument, not the subject - a live region here would announce over the
+	 * announcements we are trying to hear, and there would be no telling which
+	 * of the two spoke.
+	 */
+
+	var OUTPUTS = { 0: "NONE", 1: "SCREEN_READER", 2: "SYNTHESIZER" };
+
+	function fail(html) {
+		errorBox.innerHTML = html;
+		errorBox.hidden = false;
+	}
+
+	/* eclair.h's ten public functions, declared the way eclair-tk.py declares
+	 * them for ctypes. bool crosses as 'number' rather than 'boolean' because
+	 * the latter is a newer cwrap type and 1/0 is understood by every version.
+	 */
+	function bind(mod) {
+		return {
+			init:          mod.cwrap("eclair_init", "number", []),
+			shutdown:      mod.cwrap("eclair_shutdown", null, []),
+			speak:         mod.cwrap("eclair_speak", "number", ["string", "number"]),
+			stop:          mod.cwrap("eclair_stop", "number", []),
+			setRoute:      mod.cwrap("eclair_set_route", null, ["number"]),
+			setRate:       mod.cwrap("eclair_set_rate", null, ["number"]),
+			setVolume:     mod.cwrap("eclair_set_volume", null, ["number"]),
+			currentOutput: mod.cwrap("eclair_current_output", "number", []),
+			backendName:   mod.cwrap("eclair_backend_name", "string", []),
+			errorString:   mod.cwrap("eclair_error_string", "string", ["number"])
+		};
+	}
+
+	function wire(lib) {
+		function report(call, code) {
+			resultLine.textContent = call + " -> " + lib.errorString(code);
+		}
+
+		/* Re-read routing every 500ms. eclair.h says a screen reader can start or
+		 * stop at any time, so this is the contract made visible - and it is what
+		 * stands in for Prism's availability callback, with no thread anywhere.
+		 */
+		function refresh() {
+			var out = OUTPUTS[lib.currentOutput()] || "?";
+
+			/* cwrap's 'string' return reads UTF-8 from the returned pointer, and
+			 * a NULL pointer comes back as "" rather than null - so an empty name
+			 * is how eclair_backend_name() says there is no backend.
+			 */
+			var name = lib.backendName();
+
+			statusLine.textContent =
+				"output = " + out + "    backend = " + (name || "(none)");
+		}
+
+		speakBtn.addEventListener("click", function () {
+			report("speak", lib.speak(text.value, 0));
+		});
+
+		speakInterruptBtn.addEventListener("click", function () {
+			report("speak(interrupt)", lib.speak(text.value, 1));
+		});
+
+		stopBtn.addEventListener("click", function () {
+			report("stop", lib.stop());
+		});
+
+		route.addEventListener("change", function () {
+			lib.setRoute(Number(route.value));
+			refresh();
+		});
+
+		rate.addEventListener("input", function () {
+			var v = Number(rate.value);
+			rateLabel.textContent = "Rate " + v.toFixed(2);
+			lib.setRate(v);
+		});
+
+		volume.addEventListener("input", function () {
+			var v = Number(volume.value);
+			volumeLabel.textContent = "Volume " + v.toFixed(2);
+			lib.setVolume(v);
+		});
+
+		window.addEventListener("pagehide", function () { lib.shutdown(); });
+
+		controls.disabled = false;
+		report("init", lib.init());
+		refresh();
+		setInterval(refresh, 500);
+	}
+
+	/* The Tk harness fails loudly when Apple's Tk is too old to render, rather
+	 * than presenting an empty window. These are the two equivalents here: a
+	 * .wasm cannot be fetched from file://, and dist/ may simply not be built.
+	 */
+	function boot() {
+		if (location.protocol === "file:") {
+			fail("This page has to be served over http - browsers refuse to fetch " +
+			     "a <code>.wasm</code> from <code>file://</code>.<br>" +
+			     "Run <code>python3 example/eclair-web.py</code> instead.");
+			return;
+		}
+
+		if (typeof Eclair !== "function") {
+			fail("Could not load <code>dist/eclair.js</code> - build it first, " +
+			     "see <code>scripts/build-web.sh</code>.");
+			return;
+		}
+
+		/* Unlike ctypes, the module is not usable on the next line - the browser
+		 * has to fetch and instantiate the .wasm first.
+		 */
+		Eclair().then(function (mod) {
+			wire(bind(mod));
+		}).catch(function (e) {
+			fail("dist/eclair.js failed to start: <code>" + e + "</code>");
+		});
+	}
+
+	boot();
+</script>
+</body>
+</html>
