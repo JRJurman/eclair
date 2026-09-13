@@ -1,5 +1,5 @@
 /*
- * eclair - Windows backend: NVDA, JAWS, UIA (screen readers), SAPI (synthesizer)
+ * eclair - Windows backend: NVDA, JAWS, Narrator (screen readers), SAPI (synthesizer)
  * Copyright (c) 2026 Jesse Jurman. zlib license - see LICENSE.md
  */
 
@@ -539,7 +539,7 @@ void eclair_platform_shutdown(void) {
 	}
 }
 
-// screen readers lifecycle functions (NVDA, JAWS, UIA)
+// screen readers lifecycle functions (NVDA, JAWS, Narrator)
 
 bool eclair_sr_available(void) {
 	return sr_active() != NULL;
