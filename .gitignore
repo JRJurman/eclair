@@ -2,4 +2,4 @@
 dist
 
 # example resources
-example/*.dll
+examples/desktop-python/*.dll

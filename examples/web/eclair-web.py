@@ -2,11 +2,11 @@
 """
 eclair - web test harness server
 
-Serves example/eclair-web.html and dist/ over http, because browsers refuse to
+Serves examples/web/eclair-web.html and dist/ over http, because browsers refuse to
 fetch a .wasm from file://. The counterpart to eclair-tk.py - same invocation,
 same job, the other platform.
 
-    python3 example/eclair-web.py [port] [--lan]
+    python3 examples/web/eclair-web.py [port] [--lan]
 
 --lan binds every interface and prints the address to reach this machine from a
 phone, which is what the Android and iOS rows of the test matrix need.
@@ -23,7 +23,7 @@ import sys
 import webbrowser
 
 DEFAULT_PORT = 8000
-PAGE = "example/eclair-web.html"
+PAGE = "examples/web/eclair-web.html"
 
 # Python reads the system mime database, which on plenty of machines has no
 # entry for .wasm - and WebAssembly.instantiateStreaming() refuses anything that
@@ -59,9 +59,10 @@ def main():
     ports = [a for a in args if not a.startswith("-")]
     port = int(ports[0]) if ports else DEFAULT_PORT
 
-    # the repository root, so that the page and ../dist/ are both reachable no
-    # matter which directory this was started from
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # the repository root - two levels up from examples/web/ - so that the page
+    # and dist/ are both under the served tree no matter which directory this
+    # was started from
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     if not os.path.exists(os.path.join(root, "dist", "eclair.js")):
         print("note: dist/eclair.js is missing - build it with scripts/build-web.sh")

@@ -8,9 +8,6 @@
 <!--
 	eclair - web test harness
 
-	The counterpart to example/eclair-tk.py: a page exposing every control the
-	API offers, driving the same library the other harness does.
-
 	It loads dist/eclair.js, which is the JavaScript glue emcc writes alongside
 	dist/eclair.wasm - the pair together is what libeclair.dylib is on desktop.
 	Build them first with scripts/build-web.sh.
@@ -19,7 +16,7 @@
 	Tk harness: it marshals JS values across the wasm boundary, where a
 	const char* is an offset into the heap rather than a string.
 
-	Serve it with example/eclair-web.py - browsers refuse to fetch a .wasm
+	Serve it with examples/web/eclair-web.py - browsers refuse to fetch a .wasm
 	from file://, and that script sets the .wasm MIME type correctly too.
 -->
 
@@ -94,7 +91,7 @@
 	rather than starting on load, so the page decides when to instantiate.
 	A missing file leaves Eclair undefined, which boot() reports.
 -->
-<script src="../dist/eclair.js"></script>
+<script src="../../dist/eclair.js"></script>
 
 <script>
 	"use strict";
@@ -202,7 +199,7 @@
 		if (location.protocol === "file:") {
 			fail("This page has to be served over http - browsers refuse to fetch " +
 			     "a <code>.wasm</code> from <code>file://</code>.<br>" +
-			     "Run <code>python3 example/eclair-web.py</code> instead.");
+			     "Run <code>python3 examples/web/eclair-web.py</code> instead.");
 			return;
 		}
 

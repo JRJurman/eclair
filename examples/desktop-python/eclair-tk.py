@@ -35,7 +35,7 @@ OUTPUTS = {0: "NONE", 1: "SCREEN_READER", 2: "SYNTHESIZER"}
 def load_eclair():
     name = LIB_NAMES[platform.system()]
     here = os.path.dirname(os.path.abspath(__file__))
-    for path in (os.path.join(here, "..", "dist", name),
+    for path in (os.path.join(here, "..", "..", "dist", name),
                  os.path.join(here, name), name):
         try:
             lib = ctypes.CDLL(path)
