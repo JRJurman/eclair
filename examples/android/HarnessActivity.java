@@ -211,42 +211,6 @@ public class HarnessActivity extends Activity {
 		result = label("");
 		column.addView(result);
 
-		column.addView(rule());
-
-		/*
-		 * The one control the other harnesses have no equivalent for, and the
-		 * one that matches how LOVE will actually call eclair.
-		 *
-		 * SDL runs the game on `new Thread(new SDLMain(), "SDLThread")` - a
-		 * plain Java thread, not the main looper. This button reproduces that
-		 * shape: a java.lang.Thread is created by the JVM and is therefore
-		 * attached by construction, so GetEnv answers JNI_OK and the seam
-		 * works. It is also the only way to exercise sendAccessibilityEvent
-		 * off the main looper, where its IllegalStateException cannot fire.
-		 *
-		 * It does NOT reach eclair_env()'s JNI_EDETACHED branch. Nothing
-		 * started from Java can: that needs a pthread_create'd thread in C
-		 * which never calls AttachCurrentThread.
-		 */
-		column.addView(button("Speak from a background thread", new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				final byte[] utf8 = utf8();
-				new Thread(new Runnable() {
-					@Override
-					public void run() {
-						final int code = speak(utf8, false);
-						handler.post(new Runnable() {
-							@Override
-							public void run() {
-								report("speak (background thread)", code);
-							}
-						});
-					}
-				}).start();
-			}
-		}));
-
 		ScrollView scroller = new ScrollView(this);
 		scroller.addView(column);
 		return scroller;
