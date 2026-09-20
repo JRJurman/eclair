@@ -1,0 +1,4 @@
+{
+	// The Java source root is src/java, not src
+	"java.project.sourcePaths": ["src/java"],
+}

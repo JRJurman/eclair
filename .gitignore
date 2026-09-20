@@ -3,3 +3,6 @@ dist
 
 # example resources
 examples/desktop-python/*.dll
+
+# test harness build output (apk, signing key, intermediates)
+examples/android/build

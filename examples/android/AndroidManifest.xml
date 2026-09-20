@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	eclair - Android test harness
+
+	Use build.sh to build app against a local device
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="org.eclair.harness">
+	<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" />
+
+	<queries>
+		<intent>
+			<action android:name="android.intent.action.TTS_SERVICE" />
+		</intent>
+	</queries>
+
+	<application
+		android:label="eclair harness"
+		android:theme="@android:style/Theme.Material.Light"
+		android:extractNativeLibs="true">
+
+		<provider
+			android:name="org.eclair.EclairInitProvider"
+			android:authorities="org.eclair.harness.eclairinit"
+			android:exported="false"
+			android:initOrder="100" />
+
+		<activity
+			android:name="org.eclair.harness.HarnessActivity"
+			android:exported="true"
+			android:label="eclair harness"
+			android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+			android:windowSoftInputMode="adjustResize">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+
+	</application>
+</manifest>
