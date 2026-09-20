@@ -88,7 +88,7 @@ public class HarnessActivity extends Activity {
 
 	/* Re-read routing every 500ms. eclair.h says a screen reader can start or
 	 * stop at any time, so this is the contract made visible - and it is what
-	 * stands in for Prism's availability callback, with no thread anywhere.
+	 * stands in for an availability callback, with no thread anywhere.
 	 *
 	 * On Android it does a second job the other harnesses have no need for:
 	 * TextToSpeech binds asynchronously, so this is where you watch the startup

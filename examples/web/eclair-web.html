@@ -139,7 +139,7 @@
 
 		/* Re-read routing every 500ms. eclair.h says a screen reader can start or
 		 * stop at any time, so this is the contract made visible - and it is what
-		 * stands in for Prism's availability callback, with no thread anywhere.
+		 * stands in for an availability callback, with no thread anywhere.
 		 */
 		function refresh() {
 			var out = OUTPUTS[lib.currentOutput()] || "?";

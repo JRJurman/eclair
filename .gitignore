@@ -6,3 +6,8 @@ examples/desktop-python/*.dll
 
 # test harness build output (apk, signing key, intermediates)
 examples/android/build
+
+# test harness build output (app bundle, intermediates) and per-user xcode state
+examples/ios/build
+examples/ios/Harness.xcodeproj/xcuserdata
+examples/ios/Harness.xcodeproj/project.xcworkspace

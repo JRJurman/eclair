@@ -1,0 +1,289 @@
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		EC1A17000000000000000040 /* Harness.m in Sources */ = {isa = PBXBuildFile; fileRef = EC1A17000000000000000030 /* Harness.m */; };
+		EC1A17000000000000000041 /* eclair.c in Sources */ = {isa = PBXBuildFile; fileRef = EC1A17000000000000000032 /* eclair.c */; };
+		EC1A17000000000000000042 /* eclair_apple.m in Sources */ = {isa = PBXBuildFile; fileRef = EC1A17000000000000000033 /* eclair_apple.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		EC1A17000000000000000011 /* Harness.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Harness.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC1A17000000000000000030 /* Harness.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Harness.m; sourceTree = "<group>"; };
+		EC1A17000000000000000031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EC1A17000000000000000032 /* eclair.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = eclair.c; path = ../../src/eclair.c; sourceTree = "<group>"; };
+		EC1A17000000000000000033 /* eclair_apple.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = eclair_apple.m; path = ../../src/eclair_apple.m; sourceTree = "<group>"; };
+		EC1A17000000000000000034 /* eclair.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = eclair.h; path = ../../src/eclair.h; sourceTree = "<group>"; };
+		EC1A17000000000000000035 /* eclair_backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = eclair_backend.h; path = ../../src/eclair_backend.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EC1A17000000000000000013 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EC1A17000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				EC1A17000000000000000004 /* harness */,
+				EC1A17000000000000000005 /* eclair */,
+				EC1A17000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EC1A17000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EC1A17000000000000000011 /* Harness.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EC1A17000000000000000004 /* harness */ = {
+			isa = PBXGroup;
+			children = (
+				EC1A17000000000000000030 /* Harness.m */,
+				EC1A17000000000000000031 /* Info.plist */,
+			);
+			name = harness;
+			sourceTree = "<group>";
+		};
+		EC1A17000000000000000005 /* eclair */ = {
+			isa = PBXGroup;
+			children = (
+				EC1A17000000000000000034 /* eclair.h */,
+				EC1A17000000000000000035 /* eclair_backend.h */,
+				EC1A17000000000000000032 /* eclair.c */,
+				EC1A17000000000000000033 /* eclair_apple.m */,
+			);
+			name = eclair;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EC1A17000000000000000010 /* Harness */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC1A17000000000000000021 /* Build configuration list for PBXNativeTarget "Harness" */;
+			buildPhases = (
+				EC1A17000000000000000012 /* Sources */,
+				EC1A17000000000000000013 /* Frameworks */,
+				EC1A17000000000000000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Harness;
+			productName = Harness;
+			productReference = EC1A17000000000000000011 /* Harness.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EC1A17000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					EC1A17000000000000000010 = {
+						CreatedOnToolsVersion = 27.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = EC1A17000000000000000020 /* Build configuration list for PBXProject "Harness" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EC1A17000000000000000002;
+			productRefGroup = EC1A17000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EC1A17000000000000000010 /* Harness */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EC1A17000000000000000014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EC1A17000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EC1A17000000000000000040 /* Harness.m in Sources */,
+				EC1A17000000000000000041 /* eclair.c in Sources */,
+				EC1A17000000000000000042 /* eclair_apple.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		EC1A17000000000000000022 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				WARNING_CFLAGS = (
+					"-Wall",
+					"-Wextra",
+				);
+			};
+			name = Debug;
+		};
+		EC1A17000000000000000023 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+				WARNING_CFLAGS = (
+					"-Wall",
+					"-Wextra",
+				);
+			};
+			name = Release;
+		};
+		EC1A17000000000000000024 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../src";
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					UIKit,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					Foundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.eclair.harness;
+				PRODUCT_NAME = Harness;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EC1A17000000000000000025 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../src";
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					UIKit,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					Foundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.eclair.harness;
+				PRODUCT_NAME = Harness;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EC1A17000000000000000020 /* Build configuration list for PBXProject "Harness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC1A17000000000000000022 /* Debug */,
+				EC1A17000000000000000023 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EC1A17000000000000000021 /* Build configuration list for PBXNativeTarget "Harness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC1A17000000000000000024 /* Debug */,
+				EC1A17000000000000000025 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EC1A17000000000000000001 /* Project object */;
+}
