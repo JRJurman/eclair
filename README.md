@@ -1,6 +1,6 @@
 # eclair
 
-![cartoon of half an eclair pastry with a glossy chocolate top and white filling exposed](./eclair.png)
+![cartoon of half an eclair pastry with a glossy chocolate top and white filling](./eclair.png)
 
 _Embedded Cross-platform Library for Assistive Interface Routing_
 
@@ -40,7 +40,7 @@ interfaces, you may want to look at [AccessKit](https://accesskit.dev/) instead.
 eclair_error eclair_init(void);
 void eclair_shutdown(void);
 
-// output function
+// output functions
 eclair_error eclair_speak(const char *utf8, bool interrupt)
 eclair_error eclair_stop(void)
 
@@ -51,14 +51,18 @@ void eclair_set_volume(float volume)
 eclair_output eclair_current_output(void)
 ```
 
-## Examples
+## Testing
 
-You can run the examples in the `/examples` directory of this project to test the different controls and behaviors on different platforms. You'll need to install and enable screen readers for any platform that you are testing on.
+You can run the examples in the `/examples` directory of this project to test the different controls and behaviors on different platforms. You'll need to install and enable screen readers for any platform that you are testing on. These tests are made to run on real hardware.
 
 ## Inspirations and Alternatives
 
 Eclair is heavily inspired by [SRAL (now archived)](https://github.com/m1maker/SRAL) and [Prism](https://github.com/ethindp/prism).
 
+## Development
+
+This project is in active development. There is a long list of tasks still to be completed. If you are interested in helping or would like help integrating into your own project, feel free to start a [discussion](https://github.com/JRJurman/eclair/discussions/categories/general).
+
 ## Logo
 
-The above logo at the top was created by Jesse Jurman and Eva Jurman
+The above logo was created by Jesse Jurman and Eva Jurman
