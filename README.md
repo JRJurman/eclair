@@ -1,6 +1,6 @@
 # eclair
 
-![cartoon of half an eclair pastry with a glossy chocolate top and white filling exposed](./eclair-logo.png)
+![cartoon of half an eclair pastry with a glossy chocolate top and white filling exposed](./eclair.png)
 
 _Embedded Cross-platform Library for Assistive Interface Routing_
 
