@@ -100,6 +100,11 @@ static bool speechd_speak(const char *utf8, bool interrupt) {
 	if (interrupt)
 		g_spd_cancel(g_spd);
 
+	// if the string is empty, simply return
+	// (this otherwises causes the host application to crash)
+	if (utf8[0] == '\0')
+		return true;
+
 	return g_spd_say(g_spd, ECLAIR_SPD_TEXT, utf8) != -1;
 }
 
