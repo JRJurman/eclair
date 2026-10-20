@@ -28,7 +28,7 @@ LINKS="ole32.lib sapi.lib oleaut32.lib user32.lib uiautomationcore.lib"
 cat > dist/obj/build.bat <<EOF
 @echo off
 call "$VCVARS" >nul || exit /b 1
-cl -nologo -LD -MD -W4 -EHsc -DECLAIR_BUILD_SHARED -I src ^
+cl -nologo -LD -MT -W4 -EHsc -DECLAIR_BUILD_SHARED -I src ^
 	src/eclair.c src/eclair_windows.cpp ^
 	-Fe:dist/eclair.dll -Fo:dist/obj/ $LINKS || exit /b 1
 EOF
