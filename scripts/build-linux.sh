@@ -7,5 +7,5 @@ mkdir -p dist
 # shipped library declares no DT_NEEDED beyond libc
 clang -shared -fPIC -std=c99 -fvisibility=hidden -DECLAIR_BUILD_SHARED \
       -Wall -Wextra -I./src \
-      src/eclair.c src/eclair_linux.c \
+      src/eclair.c src/eclair_linux.c -lm \
       -o dist/libeclair.so
