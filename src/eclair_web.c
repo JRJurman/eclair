@@ -15,12 +15,6 @@ extern bool eclair_js_synth_stop(void);
 extern void eclair_js_synth_set_rate(float rate);
 extern void eclair_js_synth_set_volume(float volume);
 
-// SpeechSynthesisUtterance.rate defaults at 1.0 and has a range of 0.1 to 10
-// to provide a sane range comparable to other backends, we set the max to 3.0
-#define ECLAIR_WEB_RATE_MIN 0.5f
-#define ECLAIR_WEB_RATE_MID 1.0f
-#define ECLAIR_WEB_RATE_MAX 3.0f
-
 /* ---------------------------------------------------------------
  * lifecycle
  * --------------------------------------------------------------- */
@@ -73,10 +67,10 @@ bool eclair_synth_stop(void) {
 	return eclair_js_synth_stop();
 }
 
+/* SpeechSynthesisUtterance.rate is already a speed multiplier (0.1 to 10, 1.0 is normal),
+ * so eclair's range passes straight through (note: measured speeds vary by voice and browser) */
 void eclair_synth_set_rate(float rate) {
-	eclair_js_synth_set_rate(
-		eclair_map_rate(rate, ECLAIR_WEB_RATE_MIN, ECLAIR_WEB_RATE_MID, ECLAIR_WEB_RATE_MAX)
-	);
+	eclair_js_synth_set_rate(rate);
 }
 
 void eclair_synth_set_volume(float volume) {

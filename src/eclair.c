@@ -9,7 +9,7 @@
 #include <stddef.h> /* NULL */
 
 
-#define ECLAIR_DEFAULT_RATE 	0.5f
+#define ECLAIR_DEFAULT_RATE ECLAIR_RATE_NORMAL
 #define ECLAIR_DEFAULT_VOLUME	1.0f
 
 static bool g_initialized = false;
@@ -49,12 +49,12 @@ static eclair_output resolve_output(void) {
 	return ECLAIR_OUTPUT_NONE;
 }
 
-/* clamp function for rate and volume setters,  goes from 0 to 1 */
-static float clamp01(float v) {
-	// use !(v > 0) to handle NaN
-	if (!(v > 0.0f)) return 0.0f;
-	if (v > 1.0f) return 1.0f;
-	return v;
+/* clamp function for rate and volume setters */
+static float clamp(float value, float min, float max) {
+	// use !(value > min) to handle NaN
+	if (!(value > min)) return min;
+	if (value > max) return max;
+	return value;
 }
 
 // lifecycle functions
@@ -130,13 +130,13 @@ void eclair_set_route(eclair_route route) {
 }
 
 void eclair_set_rate(float rate) {
-	g_rate = clamp01(rate);
+	g_rate = clamp(rate, ECLAIR_RATE_MIN, ECLAIR_RATE_MAX);
 	if (g_initialized)
 		eclair_synth_set_rate(g_rate);
 }
 
 void eclair_set_volume(float volume) {
-	g_volume = clamp01(volume);
+	g_volume = clamp(volume, 0.0f, 1.0f);
 	if (g_initialized)
 		eclair_synth_set_volume(g_volume);
 }

@@ -13,10 +13,6 @@
 
 #define ECLAIR_JAVA_CLASS "org/eclair/Eclair"
 
-#define ECLAIR_ANDROID_RATE_MIN 0.5f
-#define ECLAIR_ANDROID_RATE_MID 1.0f
-#define ECLAIR_ANDROID_RATE_MAX 3.0f
-
 static JavaVM *g_vm = NULL;
 static jclass g_eclair = NULL;
 
@@ -228,11 +224,27 @@ bool eclair_synth_stop(void) {
 	return eclair_call_bool(g_synth_stop);
 }
 
+#define ANDROID_MIN_RATE_VALUE 0.25f
+#define ANDROID_MIN_RATE_SPEED 0.53f /* measured at 0.25 */
+
+/* map eclair's multiplication-based range (0.5 to 4.0) to setSpeechRate's multiplier;
+ * Google's engine honours rates above 1.0 exactly, but compresses rates below 1.0 */
+static float eclair_to_android_rate(float rate) {
+	if (rate >= 1.0f) {
+		return rate;
+	}
+
+	float android_rate = 1.0f + (1.0f - ANDROID_MIN_RATE_VALUE) * (rate - 1.0f) / (1.0f - ANDROID_MIN_RATE_SPEED);
+
+	if (android_rate < ANDROID_MIN_RATE_VALUE) {
+		return ANDROID_MIN_RATE_VALUE;
+	}
+
+	return android_rate;
+}
+
 void eclair_synth_set_rate(float rate) {
-	eclair_call_float(g_synth_set_rate, eclair_map_rate(
-		rate, ECLAIR_ANDROID_RATE_MIN,
-		ECLAIR_ANDROID_RATE_MID, ECLAIR_ANDROID_RATE_MAX
-	));
+	eclair_call_float(g_synth_set_rate, eclair_to_android_rate(rate));
 }
 
 void eclair_synth_set_volume(float volume) {

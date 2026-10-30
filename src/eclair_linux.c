@@ -19,7 +19,7 @@ static bool utf8_valid(const char *utf8) {
 	return true;
 }
 
-static float g_rate = 0.5f;
+static float g_rate = 1.0f;
 static float g_volume = 1.0f;
 
 /* ---------------------------------------------------------------
@@ -115,12 +115,38 @@ static bool speechd_stop(void) {
 	return g_spd_cancel(g_spd) == 0;
 }
 
+#define SPEECHD_MIN_RATE_VALUE (-100)
+#define SPEECHD_MAX_RATE_VALUE 100
+#define SPEECHD_MIN_RATE_SPEED 0.5f /* measured at -100 */
+#define SPEECHD_MAX_RATE_SPEED 2.55f /* measured at +100 */
+
+/* map eclair's multiplication-based range (0.5 to 4.0) to Speech Dispatcher's -100 to +100;
+ * espeak-ng maps -100 / 0 / +100 linearly onto 80 / 170 / 449 wpm, so each half is a
+ * straight line with its own slope */
+static int eclair_to_speechd_rate(float rate) {
+	float speechd_rate;
+	if (rate < 1.0f) {
+		speechd_rate = SPEECHD_MAX_RATE_VALUE * (rate - 1.0f) / (1.0f - SPEECHD_MIN_RATE_SPEED);
+	} else {
+		speechd_rate = SPEECHD_MAX_RATE_VALUE * (rate - 1.0f) / (SPEECHD_MAX_RATE_SPEED - 1.0f);
+	}
+
+	if (speechd_rate < SPEECHD_MIN_RATE_VALUE) {
+		return SPEECHD_MIN_RATE_VALUE;
+	}
+
+	if (speechd_rate > SPEECHD_MAX_RATE_VALUE) {
+		return SPEECHD_MAX_RATE_VALUE;
+	}
+
+	return (int) lroundf(speechd_rate);
+}
+
 static void speechd_set_rate(float rate) {
 	g_rate = rate;
 	if (g_spd != NULL) {
-		// range is -100 to 100, 0 is the default
-		int spd_rate = (int) lroundf(eclair_map_rate(rate, -100.0f, 0.0f, 100.0f));
-		g_spd_set_voice_rate(g_spd, spd_rate);
+		int speechd_rate = eclair_to_speechd_rate(rate);
+		g_spd_set_voice_rate(g_spd, speechd_rate);
 	}
 }
 

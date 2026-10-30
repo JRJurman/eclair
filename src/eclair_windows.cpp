@@ -24,12 +24,12 @@
 #include <stdlib.h>
 #include <string.h> /* memcpy */
 #include <wchar.h> /* wcslen */
-#include <math.h> /* lroundf */
+#include <math.h> /* lroundf, logf */
 
 /* true when our CoInitializeEx call was counted and we owe a CoUninitialize */
 static bool g_com_owned = false;
 
-static float g_rate = 0.5f;
+static float g_rate = 1.0f;
 static float g_volume = 1.0f;
 
 static wchar_t *utf8_to_wide(const char *utf8) {
@@ -484,10 +484,29 @@ static bool sapi_stop(void) {
 	return SUCCEEDED(hr);
 }
 
+#define SAPI_MIN_RATE_VALUE (-10)
+#define SAPI_MAX_RATE_VALUE 10
+#define SAPI_MAX_RATE_SPEED 3.0f /* measured speed at +10 */
+
+/* map eclair's multiplication-based range (0.5 to 4.0) to SAPI's logarithmic range (-10 to +10) */
+static long eclair_to_sapi_rate(float rate) {
+	long sapi_rate = lroundf(SAPI_MAX_RATE_VALUE * logf(rate) / logf(SAPI_MAX_RATE_SPEED));
+
+	if (sapi_rate < SAPI_MIN_RATE_VALUE) {
+		return SAPI_MIN_RATE_VALUE;
+	}
+
+	if (sapi_rate > SAPI_MAX_RATE_VALUE) {
+		return SAPI_MAX_RATE_VALUE;
+	}
+
+	return sapi_rate;
+}
+
 static void sapi_set_rate(float rate) {
 	g_rate = rate;
 	if (g_voice != NULL) {
-		long sapi_rate = (long) lroundf(eclair_map_rate(rate, -10.0f, 0.0f, 10.0f));
+		long sapi_rate = eclair_to_sapi_rate(rate);
 		g_voice->SetRate(sapi_rate);
 	}
 }

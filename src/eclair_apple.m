@@ -21,7 +21,7 @@
 #endif
 
 static AVSpeechSynthesizer *g_synth = nil;
-static float g_rate = 0.5f;
+static float g_rate = 1.0f;
 static float g_volume = 1.0f;
 
 bool eclair_platform_init(void) {
@@ -89,6 +89,34 @@ bool eclair_synth_available(void) {
 	return g_synth != nil;
 }
 
+#define AVSPEECH_MIN_RATE_SPEED 0.56f /* measured at 0.0 (AVSpeechUtteranceMinimumSpeechRate) */
+#define AVSPEECH_MAX_RATE_SPEED 3.85f /* measured at 1.0 (AVSpeechUtteranceMaximumSpeechRate) */
+
+/* map eclair's multiplication-based range (0.5 to 4.0) to AVSpeech's 0.0 to 1.0;
+ * measured speed is roughly linear on each side of the default (0.5) */
+static float eclair_to_avspeech_rate(float rate) {
+	float min_rate = AVSpeechUtteranceMinimumSpeechRate;
+	float default_rate = AVSpeechUtteranceDefaultSpeechRate;
+	float max_rate = AVSpeechUtteranceMaximumSpeechRate;
+
+	float avspeech_rate;
+	if (rate < 1.0f) {
+		avspeech_rate = default_rate + (default_rate - min_rate) * (rate - 1.0f) / (1.0f - AVSPEECH_MIN_RATE_SPEED);
+	} else {
+		avspeech_rate = default_rate + (max_rate - default_rate) * (rate - 1.0f) / (AVSPEECH_MAX_RATE_SPEED - 1.0f);
+	}
+
+	if (avspeech_rate < min_rate) {
+		return min_rate;
+	}
+
+	if (avspeech_rate > max_rate) {
+		return max_rate;
+	}
+
+	return avspeech_rate;
+}
+
 bool eclair_synth_speak(const char *utf8, bool interrupt) {
 	if (g_synth == nil)
 		return false;
@@ -101,9 +129,7 @@ bool eclair_synth_speak(const char *utf8, bool interrupt) {
 		[g_synth stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
 
 	AVSpeechUtterance *u = [[AVSpeechUtterance alloc] initWithString:text];
-	u.rate = eclair_map_rate(g_rate, AVSpeechUtteranceMinimumSpeechRate,
-																	 AVSpeechUtteranceDefaultSpeechRate,
-																	 AVSpeechUtteranceMaximumSpeechRate);
+	u.rate = eclair_to_avspeech_rate(g_rate);
 	u.volume = g_volume;
 
 	[g_synth speakUtterance:u];
