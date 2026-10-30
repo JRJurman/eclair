@@ -31,7 +31,6 @@ public final class Eclair {
 	private static volatile TextToSpeech tts;
 	private static volatile boolean ttsReady;
 
-	private static volatile float rate = 1.0f;
 	private static volatile float volume = 1.0f;
 
 	private Eclair() {}
@@ -60,8 +59,6 @@ public final class Eclair {
 					return;
 				}
 
-				// a fresh instance needs a passed in rate
-				t.setSpeechRate(rate);
 				ttsReady = true;
 			}
 		});
@@ -170,10 +167,8 @@ public final class Eclair {
 	}
 
 	static void synthSetRate(float nativeRate) {
-		rate = nativeRate;
-
 		TextToSpeech t = tts;
-		if (t != null && ttsReady) {
+		if (t != null) {
 			t.setSpeechRate(nativeRate);
 		}
 	}

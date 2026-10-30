@@ -86,7 +86,7 @@ Chooses which types of backends to send text to: off entirely, screen readers on
 
 <dt><code>eclair_set_rate(float rate)</code></dt>
 <dd>
-Sets how fast speech is spoken, from <code>0.5</code> (half speed) to <code>4.0</code> (four times speed), defaulting to <code>1.0</code>. This only affects synthesizers - screen readers speak at the rate the user configured.
+Sets how fast speech is spoken, from <code>0.5</code> (half speed) to <code>4.0</code> (four times speed), defaulting to <code>1.0</code>. This only affects synthesizers - screen readers speak at the rate the user configured. Platforms (like Android) may have a different default on startup.
 </dd>
 
 <dt><code>eclair_set_volume(float volume)</code></dt>

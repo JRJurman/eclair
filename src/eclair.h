@@ -8,7 +8,7 @@
 
 #define ECLAIR_VERSION_MAJOR 0
 #define ECLAIR_VERSION_MINOR 2
-#define ECLAIR_VERSION_PATCH 0
+#define ECLAIR_VERSION_PATCH 1
 
 #include <stdbool.h>
 
@@ -106,7 +106,8 @@ ECLAIR_API eclair_error eclair_stop(void);
 ECLAIR_API void eclair_set_route(eclair_route route);
 
 /* set speech rate, 0.5 (half speed), 4.0 (four times speed), default 1.0;
- * only applies to synthesizers (screen readers have their own rate)
+ * only applies to synthesizers (screen readers have their own rate);
+ * some platforms (Android) start with a platform defined rate instead of the 1.0 default
  */
 #define ECLAIR_RATE_MIN 0.5f
 #define ECLAIR_RATE_NORMAL 1.0f

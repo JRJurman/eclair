@@ -8,14 +8,8 @@
 
 #include <stddef.h> /* NULL */
 
-
-#define ECLAIR_DEFAULT_RATE ECLAIR_RATE_NORMAL
-#define ECLAIR_DEFAULT_VOLUME	1.0f
-
 static bool g_initialized = false;
 static eclair_route g_route = ECLAIR_ROUTE_PREFER_SCREEN_READER;
-static float g_rate = ECLAIR_DEFAULT_RATE;
-static float g_volume = ECLAIR_DEFAULT_VOLUME;
 
 /* single source of truth for routing; eclair_speak(), eclair_backend_name(),
  * and eclair_current_output() all resolve through here
@@ -67,10 +61,6 @@ eclair_error eclair_init(void) {
 		return ECLAIR_ERR_BACKEND_FAILED;
 
 	g_initialized = true;
-
-	// send our current settings to the backend
-	eclair_synth_set_rate(g_rate);
-	eclair_synth_set_volume(g_volume);
 
 	return ECLAIR_OK;
 }
@@ -130,15 +120,15 @@ void eclair_set_route(eclair_route route) {
 }
 
 void eclair_set_rate(float rate) {
-	g_rate = clamp(rate, ECLAIR_RATE_MIN, ECLAIR_RATE_MAX);
+	float clamped_rate = clamp(rate, ECLAIR_RATE_MIN, ECLAIR_RATE_MAX);
 	if (g_initialized)
-		eclair_synth_set_rate(g_rate);
+		eclair_synth_set_rate(clamped_rate);
 }
 
 void eclair_set_volume(float volume) {
-	g_volume = clamp(volume, 0.0f, 1.0f);
+	float clamped_volume = clamp(volume, 0.0f, 1.0f);
 	if (g_initialized)
-		eclair_synth_set_volume(g_volume);
+		eclair_synth_set_volume(clamped_volume);
 }
 
 eclair_output eclair_current_output(void) {
