@@ -43,6 +43,10 @@ static eclair_output resolve_output(void) {
 	return ECLAIR_OUTPUT_NONE;
 }
 
+/* eclair_set_rate's range */
+#define ECLAIR_RATE_MIN 0.5f
+#define ECLAIR_RATE_MAX 4.0f
+
 /* clamp function for rate and volume setters */
 static float clamp(float value, float min, float max) {
 	// use !(value > min) to handle NaN
