@@ -105,7 +105,8 @@ ECLAIR_API eclair_error eclair_stop(void);
  */
 ECLAIR_API void eclair_set_route(eclair_route route);
 
-/* set speech rate, 0.5 (half speed), 4.0 (four times speed), default 1.0;
+/* set speech rate from 0.5 (roughly half speed) to 4.0 (roughly four times speed);
+ * actual speeds vary by platform and voice; the default is 1.0;
  * only applies to synthesizers (screen readers have their own rate);
  * some platforms (Android) start with a platform defined rate instead of the 1.0 default
  */
