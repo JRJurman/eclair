@@ -88,9 +88,9 @@ class App(ttk.Frame):
         self.route.grid(row=r, column=1, sticky="ew", pady=4)
 
         r += 1
-        self.rate_lbl = ttk.Label(self, text="Rate 0.50")
+        self.rate_lbl = ttk.Label(self, text="Rate 1.00")
         self.rate_lbl.grid(row=r, column=0, sticky="w")
-        ttk.Scale(self, from_=0.0, to=1.0, value=0.5,
+        ttk.Scale(self, from_=0.5, to=4.0, value=1.0,
                   command=self.on_rate).grid(row=r, column=1, sticky="ew", pady=4)
 
         r += 1

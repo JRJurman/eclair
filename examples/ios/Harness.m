@@ -91,6 +91,15 @@ static NSString *ErrName(eclair_error err) {
 	return [NSString stringWithUTF8String:eclair_error_string(err)];
 }
 
+/* the sliders draw and track a 0-1 position; rate spans eclair's whole range (0.5 to 4.0) */
+static float PositionToRate(float position) {
+	return 0.5f + position * 3.5f;
+}
+
+static float RateToPosition(float rate) {
+	return (rate - 0.5f) / 3.5f;
+}
+
 #pragma mark - the canvas
 
 @interface CanvasView : UIView
@@ -118,7 +127,7 @@ static NSString *ErrName(eclair_error err) {
 	_controls = [NSMutableArray array];
 	_textIndex = 0;
 	_route = ECLAIR_ROUTE_PREFER_SCREEN_READER;
-	_rate = 0.5f;
+	_rate = 1.0f;
 	_volume = 1.0f;
 	_status = @"";
 	_result = @"";
@@ -246,7 +255,7 @@ static NSString *ErrName(eclair_error err) {
 				break;
 
 			case ControlKindSlider:
-				[self drawSlider:c.frame value:(c.tag == TagRate ? _rate : _volume)];
+				[self drawSlider:c.frame value:(c.tag == TagRate ? RateToPosition(_rate) : _volume)];
 				break;
 		}
 	}
@@ -389,8 +398,8 @@ static NSString *ErrName(eclair_error err) {
 	v = v < 0 ? 0 : (v > 1 ? 1 : v);
 
 	if (c.tag == TagRate) {
-		_rate = v;
-		eclair_set_rate(v);
+		_rate = PositionToRate(v);
+		eclair_set_rate(_rate);
 	} else {
 		_volume = v;
 		eclair_set_volume(v);
@@ -453,7 +462,6 @@ static NSString *ErrName(eclair_error err) {
 #pragma mark - app delegate
 
 @interface HarnessAppDelegate : UIResponder <UIApplicationDelegate>
-@property (nonatomic, strong) UIWindow *window;
 @end
 
 @implementation HarnessAppDelegate
@@ -464,14 +472,6 @@ static NSString *ErrName(eclair_error err) {
 	(void)options;
 
 	eclair_error err = eclair_init();
-
-	UIViewController *vc = [[UIViewController alloc] init];
-	vc.view = [[CanvasView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-
-	self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
-	self.window.rootViewController = vc;
-	[self.window makeKeyAndVisible];
-
 	NSLog(@"eclair_init -> %@", ErrName(err));
 	return YES;
 }
@@ -479,6 +479,34 @@ static NSString *ErrName(eclair_error err) {
 - (void)applicationWillTerminate:(UIApplication *)application {
 	(void)application;
 	eclair_shutdown();
+}
+
+@end
+
+#pragma mark - scene delegate
+
+/* the iOS 27 SDK refuses to launch an app without the UIScene life cycle, so the
+ * window lives here (named in Info.plist's UIApplicationSceneManifest) */
+@interface HarnessSceneDelegate : UIResponder <UIWindowSceneDelegate>
+@property (nonatomic, strong) UIWindow *window;
+@end
+
+@implementation HarnessSceneDelegate
+
+- (void)scene:(UIScene *)scene
+	willConnectToSession:(UISceneSession *)session
+				   options:(UISceneConnectionOptions *)options {
+	(void)session;
+	(void)options;
+
+	UIWindowScene *windowScene = (UIWindowScene *)scene;
+	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
+
+	UIViewController *vc = [[UIViewController alloc] init];
+	vc.view = [[CanvasView alloc] initWithFrame:self.window.bounds];
+
+	self.window.rootViewController = vc;
+	[self.window makeKeyAndVisible];
 }
 
 @end

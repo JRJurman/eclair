@@ -15,6 +15,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -80,6 +81,7 @@ public class HarnessActivity extends Activity {
 
 	private EditText text;
 	private TextView rateLabel;
+	private SeekBar rateBar;
 	private TextView volumeLabel;
 	private TextView status;
 	private TextView result;
@@ -109,6 +111,16 @@ public class HarnessActivity extends Activity {
 		setContentView(buildUi());
 
 		report("init", init());
+
+		/* `adb shell am start -n org.eclair.harness/.HarnessActivity --ef rate 2.0`
+		 * sets a rate straight after init, inside TextToSpeech's startup window,
+		 * the way a game applies its saved settings; without it, the player's
+		 * system speech rate applies until the slider moves. */
+		float startRate = getIntent().getFloatExtra("rate", 0.0f);
+		if (startRate > 0.0f) {
+			rateBar.setProgress(Math.round((startRate - 0.5f) * 100.0f));
+		}
+
 		refresh();
 		handler.post(poll);
 	}
@@ -182,19 +194,25 @@ public class HarnessActivity extends Activity {
 		});
 		column.addView(route);
 
-		rateLabel = label("Rate 0.50");
+		/* rate spans eclair's whole range, 0.5 to 4.0, so the bar's 0..350 is offset by 0.5;
+		 * it starts at the player's system speech rate, which is what speaks until the
+		 * slider moves (eclair sets no rate of its own) */
+		float systemRate = systemSpeechRate();
+		rateLabel = label(String.format(Locale.US, "Rate %.2f (system)", systemRate));
 		column.addView(rateLabel);
-		column.addView(slider(50, "Speech rate", new OnSlide() {
+		rateBar = slider(350, Math.round((systemRate - 0.5f) * 100.0f), "Speech rate", new OnSlide() {
 			@Override
 			public void onValue(float v) {
-				rateLabel.setText(String.format(Locale.US, "Rate %.2f", v));
-				setRate(v);
+				float rate = 0.5f + v;
+				rateLabel.setText(String.format(Locale.US, "Rate %.2f", rate));
+				setRate(rate);
 			}
-		}));
+		});
+		column.addView(rateBar);
 
 		volumeLabel = label("Volume 1.00");
 		column.addView(volumeLabel);
-		column.addView(slider(100, "Volume", new OnSlide() {
+		column.addView(slider(100, 100, "Volume", new OnSlide() {
 			@Override
 			public void onValue(float v) {
 				volumeLabel.setText(String.format(Locale.US, "Volume %.2f", v));
@@ -240,11 +258,21 @@ public class HarnessActivity extends Activity {
 			+ "    backend = " + (name != null ? name : "(none)"));
 	}
 
+	/* the player's system speech rate, stored as a percentage (100 is 1.0x, the value
+	 * when it has never been changed); Android-only, so eclair itself can't offer it.
+	 * Google's engine honours it exactly above 1.0, so it lines up with eclair's scale
+	 * there; below 1.0 eclair maps rates differently, so the slider is approximate */
+	private float systemSpeechRate() {
+		int percent = Settings.Secure.getInt(getContentResolver(), Settings.Secure.TTS_DEFAULT_RATE, 100);
+		float rate = percent / 100.0f;
+		return rate < 0.5f ? 0.5f : (rate > 4.0f ? 4.0f : rate);
+	}
+
 	/* ---------------------------------------------------------------
 	 * small view helpers - the price of building the UI in code
 	 * --------------------------------------------------------------- */
 
-	/* SeekBar reports an int, so the 0..1 the API wants is carried as 0..100.
+	/* SeekBar reports an int, so values are carried in hundredths (0..100 is 0..1).
 	 * OnSeekBarChangeListener has three methods and two of them are never
 	 * interesting, so this collapses it to one. */
 	private abstract static class OnSlide implements SeekBar.OnSeekBarChangeListener {
@@ -264,9 +292,9 @@ public class HarnessActivity extends Activity {
 		}
 	}
 
-	private SeekBar slider(int initial, String description, OnSlide listener) {
+	private SeekBar slider(int max, int initial, String description, OnSlide listener) {
 		SeekBar bar = new SeekBar(this);
-		bar.setMax(100);
+		bar.setMax(max);
 		bar.setProgress(initial);
 		bar.setContentDescription(description);
 		bar.setOnSeekBarChangeListener(listener);
