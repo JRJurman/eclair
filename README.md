@@ -59,54 +59,67 @@ interfaces, you may want to look at [AccessKit](https://accesskit.dev/) instead.
 <dl>
 <dt><code>eclair_init()</code></dt>
 <dd>
-Starts eclair and connects to the running platform.
+Initialization function that starts up eclair on the platform it is loaded on.
 </dd>
 
 <dt><code>eclair_shutdown()</code></dt>
 <dd>
-Stops eclair and unloads any backend connections.
+Shutdown function that stops eclair and removes and platform hooks set up.
 </dd>
 
 <dt><code>eclair_speak(char *utf8, bool interrupt)</code></dt>
 <dd>
-Sends text to whichever backend the current route resolves to. Pass <code>true</code> for <code>interrupt</code> to ask that whatever is currently being spoken be cut off first; this is best-effort, since not every screen reader allows it.
+Main function to send text to a Screen Reader to Text to Speech Synthesizer.
+Takes in a string to read out, and an <code>interrupt</code> parameter, which may stop the previous speak command.
+
+Expects a UTF8 string (strings containing non-UTF8 characters will be rejected).
+Interrupt is best-effort, some Screen Readers and Synthesizers might always stop the ongoing read out.
 </dd>
 
 <dt><code>eclair_stop()</code></dt>
 <dd>
-Asks the active backend to stop speaking immediately.
+Function to stop the current read out.
 
 This is best-effort - some screen readers, like VoiceOver and <code>ariaNotify</code>, expose no way to cancel an announcement, so the call does nothing there and still reports <code>ECLAIR_OK</code>.
 </dd>
 
 <dt><code>eclair_set_route(eclair_route route)</code></dt>
 <dd>
-Chooses which types of backends to send text to: off entirely, screen readers only, synthesizers only, or screen reader with a synthesizer fallback. The default is <code>ECLAIR_ROUTE_PREFER_SCREEN_READER</code>. Takes effect on the next call to <code>eclair_speak()</code>.
+Function to specifically choose whether text should be sent to a screen reader or a synthesizer.
+
+By default, this is set to <code>ECLAIR_ROUTE_PREFER_SCREEN_READER</code>, which will connect to a screen reader if available,
+and fall back to a synthesizer when no screen reader is present.
 </dd>
 
 <dt><code>eclair_set_rate(float rate)</code></dt>
 <dd>
-Sets how fast speech is spoken, from <code>0.5</code> (roughly half speed) to <code>4.0</code> (roughly four times speed), defaulting to <code>1.0</code>. Actual speeds vary by platform and voice. This only affects synthesizers - screen readers speak at the rate the user configured. Platforms (like Android) may have a different default on startup.
+Function to set how fast the text should be read out. This only applies to synthesizers (not screen readers).
+
+The default value is 1.0, and the valid range is 0.5 (around half-speed) to 4.0 (four times as fast).
+Actual rates may vary across platforms. Some platforms (namely Android) may default at a platform speed.
 </dd>
 
 <dt><code>eclair_set_volume(float volume)</code></dt>
 <dd>
-Sets speech volume, from <code>0.0</code> (silent) to <code>1.0</code> (full), defaulting to <code>1.0</code>. Like the rate, this applies to synthesizers only.
+Function to set how loud the synthesizer is. This only applies to synthesizers (not screen readers).
+
+The default value is 1.0, and the valid range is 0.0 (silent) to 1.0 (full volume).
 </dd>
 
 <dt><code>eclair_current_output()</code></dt>
 <dd>
-Reports where text would go right now - a screen reader, a synthesizer, or nothing at all - by resolving the current route against what is available.
+Function to get the current backend type, either a synthesizer or screen reader. This is useful for
+determining if you should expose synthesizer specific controls (such as volume and rate).
 </dd>
 
 <dt><code>eclair_backend_name()</code></dt>
 <dd>
-Returns the name of the backend currently being used, such as <code>"NVDA"</code>, <code>"VoiceOver"</code>, or <code>"Speech Dispatcher"</code>, or NULL when there is none. Intended for display and debugging - branch on <code>eclair_current_output()</code> instead of comparing this string.
+Function to get the name of the specific screen reader or synthesizer being used. Mostly a debugging / diagnostics tool.
 </dd>
 
 <dt><code>eclair_error_string(eclair_error err)</code></dt>
 <dd>
-Returns a short English description of an error code, useful for logging and debugging. The strings are static and not translated, so they are not meant to be shown to end users.
+Function to get the english description of what an error code means. Mostly a debugging / diagnostics tool.
 </dd>
 
 </dl>
