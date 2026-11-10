@@ -103,7 +103,7 @@ echo "==> libeclair.so ($ABI, API $API)"
 # which is what keeps the NEEDED list at libc and libdl - the property readelf
 # confirms on Linux, holding here too.
 "$CC" -shared -fPIC -std=c99 \
-	-fvisibility=hidden -DECLAIR_BUILD_SHARED \
+	-fvisibility=hidden \
 	$PAGE_FLAGS \
 	-Wall -Wextra -I"$ROOT/src" \
 	"$ROOT/src/eclair.c" "$ROOT/src/eclair_android.c" \

@@ -16,19 +16,11 @@
 extern "C" {
 #endif
 
-// symbol visibility (used for shared builds)
+// export public functions
 #if defined(_WIN32)
-	#if defined(ECLAIR_BUILD_SHARED)
-		#define ECLAIR_API __declspec(dllexport)
-	#elif defined(ECLAIR_SHARED)
-		#define ECLAIR_API __declspec(dllimport)
-	#else
-		#define ECLAIR_API
-	#endif
-#elif defined(ECLAIR_BUILD_SHARED)
-	#define ECLAIR_API __attribute__((visibility("default")))
+	#define ECLAIR_API __declspec(dllexport)
 #else
-	#define ECLAIR_API
+	#define ECLAIR_API __attribute__((visibility("default")))
 #endif
 
 typedef enum {
