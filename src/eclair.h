@@ -8,7 +8,7 @@
 
 #define ECLAIR_VERSION_MAJOR 0
 #define ECLAIR_VERSION_MINOR 3
-#define ECLAIR_VERSION_PATCH 0
+#define ECLAIR_VERSION_PATCH 1
 
 #include <stdbool.h>
 

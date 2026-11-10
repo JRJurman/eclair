@@ -13,12 +13,6 @@
 
 #define ECLAIR_DLSYM(lib, fn, name) (*(void **)(&(fn)) = dlsym((lib), (name)))
 
-// libdbus aborts on a non UFT-8 string, so check it is valid befor speaking - TODO
-static bool utf8_valid(const char *utf8) {
-	(void)utf8;
-	return true;
-}
-
 static float g_rate = 1.0f;
 static float g_volume = 1.0f;
 
@@ -198,6 +192,7 @@ typedef void (*PFN_dbus_message_set_no_reply)(DBusMessage *msg, dbus_bool_t no_r
 typedef dbus_bool_t (*PFN_dbus_connection_send)(DBusConnection *conn, DBusMessage *msg, dbus_uint32_t *serial);
 typedef void (*PFN_dbus_connection_flush)(DBusConnection *conn);
 typedef void (*PFN_dbus_message_unref)(DBusMessage *msg);
+typedef dbus_bool_t (*PFN_dbus_validate_utf8)(const char *utf8, DBusError *error);
 
 static void *g_dbus_lib = NULL;
 static DBusConnection *g_dbus = NULL;
@@ -213,6 +208,12 @@ static PFN_dbus_message_set_no_reply g_dbus_message_set_no_reply = NULL;
 static PFN_dbus_connection_send g_dbus_connection_send = NULL;
 static PFN_dbus_connection_flush g_dbus_connection_flush = NULL;
 static PFN_dbus_message_unref g_dbus_message_unref = NULL;
+static PFN_dbus_validate_utf8 g_dbus_validate_utf8 = NULL;
+
+// libdbus aborts on a non UFT-8 string, so check it is valid befor speaking
+static bool utf8_valid(const char *utf8) {
+	return g_dbus_validate_utf8(utf8, NULL) != 0;
+}
 
 static void orca_unload(void) {
 	if (g_dbus != NULL) {
@@ -237,6 +238,7 @@ static void orca_unload(void) {
 	g_dbus_connection_send = NULL;
 	g_dbus_connection_flush = NULL;
 	g_dbus_message_unref = NULL;
+	g_dbus_validate_utf8 = NULL;
 }
 
 static void orca_load(void) {
@@ -255,8 +257,9 @@ static void orca_load(void) {
 	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_send, "dbus_connection_send");
 	ECLAIR_DLSYM(g_dbus_lib, g_dbus_connection_flush, "dbus_connection_flush");
 	ECLAIR_DLSYM(g_dbus_lib, g_dbus_message_unref, "dbus_message_unref");
+	ECLAIR_DLSYM(g_dbus_lib, g_dbus_validate_utf8, "dbus_validate_utf8");
 
-	if (g_dbus_bus_get_private == NULL) {
+	if (g_dbus_bus_get_private == NULL || g_dbus_validate_utf8 == NULL) {
 		orca_unload();
 		return;
 	}
