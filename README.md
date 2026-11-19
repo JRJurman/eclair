@@ -18,7 +18,9 @@ Eclair supports all major desktop and mobile platforms, as well as web applicati
 * Android with AccessibilityManager (TalkBack) and TextToSpeech
 * Web with ariaNotify and Web Speech API
 
-Some braille support does exist for screen readers that support them.
+Some Braille display support does exist for screen readers that support them.
+
+To include NVDA support, you must download and include the [nvdaControllerClient.dll](https://download.nvaccess.org/releases/stable/) alongside eclair.
 
 ## Motivation
 
