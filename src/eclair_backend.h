@@ -14,19 +14,17 @@
 extern "C" {
 #endif
 
-/* called from eclair_init() / eclair_shutdown();
- * init returns false if platform could not start
- */
+/* called from eclair_init() / eclair_shutdown() */
 bool eclair_platform_init(void);
 void eclair_platform_shutdown(void);
 
-/* user's assistive technology */
+/* screen reader specific functions */
 bool eclair_sr_available(void);
 bool eclair_sr_speak(const char *utf8, bool interrupt);
 bool eclair_sr_stop(void);
 const char *eclair_sr_name(void);
 
-/* speech synthesizer eclair drives itself */
+/* synthesizer specific functions */
 bool eclair_synth_available(void);
 bool eclair_synth_speak(const char *utf8, bool interrupt);
 bool eclair_synth_stop(void);

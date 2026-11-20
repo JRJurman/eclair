@@ -26,7 +26,7 @@
 #include <wchar.h> /* wcslen */
 #include <math.h> /* lroundf, logf */
 
-/* true when our CoInitializeEx call was counted and we owe a CoUninitialize */
+/* true when our CoInitializeEx call was counted and we need to CoUninitialize later */
 static bool g_com_owned = false;
 
 static float g_rate = 1.0f;
@@ -208,7 +208,7 @@ static bool jaws_invoke(DISPID id, const wchar_t *text, const VARIANT_BOOL *flus
 	return ok;
 }
 
-/* use `BrailleString("...")` script expression to send text to braille devices */
+/* using `BrailleString("...")` script expression to send text to braille devices */
 static wchar_t *jaws_braille_expression(const wchar_t *text) {
 	static const wchar_t prefix[] = L"BrailleString(\"";
 	static const wchar_t suffix[] = L"\")";

@@ -115,8 +115,8 @@ static bool speechd_stop(void) {
 #define SPEECHD_MAX_RATE_SPEED 2.55f /* measured at +100 */
 
 /* map eclair's multiplication-based range (0.5 to 4.0) to Speech Dispatcher's -100 to +100;
- * espeak-ng maps -100 / 0 / +100 linearly onto 80 / 170 / 449 wpm, so each half is a
- * straight line with its own slope */
+ * espeak-ng maps -100 / 0 / +100 linearly onto 80 / 170 / 449 wpm, so mostly a straight line
+ * before and after 1.0 */
 static int eclair_to_speechd_rate(float rate) {
 	float speechd_rate;
 	if (rate < 1.0f) {
