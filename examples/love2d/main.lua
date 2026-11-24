@@ -1,3 +1,5 @@
+local eclair = require('eclair')
+
 local fontSize = 24
 local margin = 30
 
@@ -19,6 +21,10 @@ function love.load()
 	local largeFont = love.graphics.newFont(fontSize)
 	love.graphics.setFont(largeFont)
 	setSelection(0)
+end
+
+function love.quit()
+	eclair.shutdown()
 end
 
 function love.update()
@@ -43,7 +49,7 @@ function love.draw()
 
 	setColorForSection(2)
 	love.graphics.printf('Route', baseX, baseY + (margin * 1), 300, 'left')
-	love.graphics.printf('< '..possibleRouteDisplayValues[routeValue]..' >', valueX, baseY + (margin * 1), 300, 'left')
+	love.graphics.printf('< '..possibleRouteDisplayValues[routeValue]..' >', valueX, baseY + (margin * 1), 400, 'left')
 
 	setColorForSection(3)
 	love.graphics.printf('Rate', baseX, baseY + (margin * 2), 300, 'left')
@@ -56,11 +62,11 @@ function love.draw()
 	baseY = 250
 	setColorForSection(5)
 	love.graphics.printf('output', baseX, baseY + (margin * 0), 300, 'left')
-	love.graphics.printf(love.speech.getOutput(), valueX, baseY + (margin * 0), 300, 'left')
+	love.graphics.printf(eclair.getOutput(), valueX, baseY + (margin * 0), 300, 'left')
 
 	setColorForSection(6)
 	love.graphics.printf('backend', baseX, baseY + (margin * 1), 300, 'left')
-	love.graphics.printf(love.speech.getBackendName() or '', valueX, baseY + (margin * 1), 300, 'left')
+	love.graphics.printf(eclair.getBackendName() or '', valueX, baseY + (margin * 1), 300, 'left')
 
 	baseY = 350
 	love.graphics.setColor(1, 1, 1)
@@ -106,14 +112,14 @@ function love.keyreleased(key)
 	if selection == 2 then
 		if key == 'left' and routeValue > 1 then
 			routeValue = routeValue - 1
-			love.speech.setRoute(possibleRouteSpeechValues[routeValue])
-			print('love.speech.setRoute('..possibleRouteSpeechValues[routeValue]..')')
+			eclair.setRoute(possibleRouteSpeechValues[routeValue])
+			print('eclair.setRoute('..possibleRouteSpeechValues[routeValue]..')')
 			updateReadout(possibleRouteDisplayValues[routeValue])
 		end
 		if key == 'right' and routeValue < 4 then
 			routeValue = routeValue + 1
-			love.speech.setRoute(possibleRouteSpeechValues[routeValue])
-			print('love.speech.setRoute('..possibleRouteSpeechValues[routeValue]..')')
+			eclair.setRoute(possibleRouteSpeechValues[routeValue])
+			print('eclair.setRoute('..possibleRouteSpeechValues[routeValue]..')')
 			updateReadout(possibleRouteDisplayValues[routeValue])
 		end
 	end
@@ -122,14 +128,14 @@ function love.keyreleased(key)
 	if selection == 3 then
 		if key == 'left' and rateValue > 0.5 then
 			rateValue = rateValue - 0.5
-			love.speech.setRate(rateValue)
-			print('love.speech.setRate('..rateValue..')')
+			eclair.setRate(rateValue)
+			print('eclair.setRate('..rateValue..')')
 			updateReadout(rateValue)
 		end
 		if key == 'right' and rateValue < 4.0 then
 			rateValue = rateValue + 0.5
-			love.speech.setRate(rateValue)
-			print('love.speech.setRate('..rateValue..')')
+			eclair.setRate(rateValue)
+			print('eclair.setRate('..rateValue..')')
 			updateReadout(rateValue)
 		end
 	end
@@ -138,14 +144,14 @@ function love.keyreleased(key)
 	if selection == 4 then
 		if key == 'left' and volumeValue > 0.1 then
 			volumeValue = volumeValue - 0.1
-			love.speech.setVolume(volumeValue)
-			print('love.speech.setVolume('..volumeValue..')')
+			eclair.setVolume(volumeValue)
+			print('eclair.setVolume('..volumeValue..')')
 			updateReadout(volumeValue)
 		end
 		if key == 'right' and volumeValue < 1.0 then
 			volumeValue = volumeValue + 0.1
-			love.speech.setVolume(volumeValue)
-			print('love.speech.setVolume('..volumeValue..')')
+			eclair.setVolume(volumeValue)
+			print('eclair.setVolume('..volumeValue..')')
 			updateReadout(volumeValue)
 		end
 	end
@@ -166,11 +172,11 @@ function setSelection(newSelection)
 	elseif selection == 4 then
 		updateReadout('Volume, press left or right to change, current value: '..volumeValue)
 	elseif selection == 5 then
-		print('love.speech.getOutput()')
-		updateReadout('Output, current value: '..love.speech.getOutput())
+		print('eclair.getOutput()')
+		updateReadout('Output, current value: '..eclair.getOutput())
 	elseif selection == 6 then
-		print('love.speech.getBackendName()')
-		updateReadout('Backend, current value: '..love.speech.getBackendName())
+		print('eclair.getBackendName()')
+		updateReadout('Backend, current value: '..(eclair.getBackendName() or 'none'))
 	end
 end
 
@@ -184,6 +190,6 @@ end
 
 function updateReadout(text)
 	readout = text
-	love.speech.speak(text, true)
-	print('love.speech.speak(\''..text..'\')')
+	eclair.speak(text, true)
+	print('eclair.speak(\''..text..'\')')
 end
